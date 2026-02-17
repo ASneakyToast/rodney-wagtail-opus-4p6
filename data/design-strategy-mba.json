@@ -1,0 +1,178 @@
+{
+  "page": {
+    "title": "Design Strategy MBA",
+    "slug": "design-strategy-mba",
+    "seo_title": "Design Strategy MBA | CCA",
+    "search_description": "CCA's two-year, low-residency Design Strategy MBA equips students with hybrid skills in design thinking, business strategy, and leadership."
+  },
+  "sections": [
+    {
+      "id": "overview",
+      "section_title": "Overview",
+      "block_type": "section_block",
+      "fields": {
+        "headline": "Redesign business as usual",
+        "subhead": "An MBA for creative changemakers",
+        "body": "CCA's two-year, low-residency Design Strategy MBA (DMBA) equips students with hybrid skills in design thinking, business strategy, and leadership. You'll learn how to expertly merge creativity and commerce to shape new possibilities for a world that needs it.\n\nWith active professionals as your professors, take on meaningful challenges for real organizations, build a portfolio that proves you can deliver, and graduate with exactly what employers need but can't find anywhere else: agility to navigate ambiguity, confidence to prototype bold ideas, and clarity to drive meaningful change.",
+        "video_embed": "https://youtu.be/lnYI1eK_pdc?si=hINlU0LJ3CUW5pUX",
+        "video_title": "Become a better business leader | MBA in Design Strategy",
+        "secondary_subhead": "Future-forward in San Francisco",
+        "secondary_body": "Our DMBA program is designed for working professionals and follows a low-residency model. During intensive weekend sessions held on campus, you'll take full advantage of our San Francisco location\u2014one of the world's most dynamic ecosystems for design, technology, and social impact. Collaborate on projects for real-world clients, ranging from global innovators like Google to community-focused startups, and develop creative leadership skills to make change at every scale.",
+        "pull_quote": {
+          "quote": "I didn't want an MBA that taught me how to keep up. I wanted one that helped me move differently, with more clarity, and in a way that felt aligned with where the world is heading.",
+          "attribution": "Jinney Kho (DMBA 2023)"
+        },
+        "gallery_label": "Student work"
+      }
+    },
+    {
+      "id": "studios_shops",
+      "section_title": "Studios & Shops",
+      "block_type": "section_block",
+      "fields": {
+        "headline": "Put strategy into practice",
+        "subhead": "Prototype your boldest business ideas",
+        "body": "Every semester, you'll move through a pathway of studio courses that turn market insights into products, experiences, and ventures. Alongside a dedicated DMBA studio designed for collaboration and focused strategy work, you'll have access to the full range of CCA's fabrication facilities\u2014from laser cutters and hybrid labs to woodshops and darkrooms.",
+        "ctas": [
+          {
+            "label": "Tour our DMBA spaces",
+            "url": "https://visitour.io/california-college-of-the-arts/cca-graduate-experience/mba-design-strategy-spaces"
+          }
+        ],
+        "secondary_subhead": "Specialized shops and studios",
+        "secondary_body": "Bring design strategy to life with cutting-edge tools and traditional craft workshops found almost nowhere else. Experiment with interdisciplinary materials and techniques, including metal fabrication and welding, ceramics, furniture design, model-making, and more.",
+        "one_up": {
+          "headline": "Help produce The DMBA podcast",
+          "body": "Hosted by program chair Justin Lokitz and produced by DMBA students, \"Everything Is a Prototype\" is devoted to the pursuit of innovating human-centered solutions.",
+          "cta_label": "Listen now",
+          "cta_url": "https://open.spotify.com/show/37zj9e8gh0HsUWsOC24PKn?si=365cfcd73cef472e&nd=1&dlsi=ea3be3f9bc4f4e86"
+        },
+        "gallery_label": "Cutting-edge tools and labs"
+      }
+    },
+    {
+      "id": "faculty",
+      "section_title": "Faculty",
+      "block_type": "section_block",
+      "fields": {
+        "headline": "Design strategy leaders",
+        "subhead": "Driving change across industries",
+        "body": "DMBA faculty aren't career academics. They're professional practitioners leading their fields\u2014from biotech to finance, service design to sustainability ventures. Many hold senior leadership roles or run their own businesses, giving you direct access to the knowledge and methods shaping today's landscape and how markets, technologies, and cultures intersect.",
+        "featured_faculty": {
+          "name": "Justin Lokitz",
+          "bio": "Justin Lokitz is an entrepreneur, technologist, and co-author of the best-selling books Design a Better Business and Business Model Shifts, who has more than 25 years of experience at companies like Oracle and Autodesk. He has seen how organizations can lose sight of customer needs\u2014and how design methods restore that focus. Today, he draws on his expertise in business models, rapid prototyping, and iterative problem-solving to lead the DMBA, empower students, and build partnerships that deliver real value."
+        },
+        "cta": {
+          "label": "Meet all our DMBA faculty",
+          "url": "https://portal.cca.edu/people/?usertype_filter[0]=Faculty&get_faculty_programs_filter[0]=Graduate%20Design%20Strategy%20Program"
+        },
+        "gallery_label": "Faculty stories"
+      }
+    },
+    {
+      "id": "curriculum",
+      "section_title": "Curriculum",
+      "block_type": "section_block",
+      "fields": {
+        "headline": "Real work for real clients",
+        "subhead": "Tackle complex challenges every class",
+        "body": "Learn exactly how to turn ideas into strategies\u2014and strategies into results. Every semester, the DMBA pairs core business courses with studios across design, business strategy, and social innovation. In applied studios, you'll analyze markets, prototype solutions, and launch new ventures with real clients like Google X, the City of San Francisco, and purpose-driven startups. With faculty who are active practitioners leading a diverse range of fields, you're sure to learn what's relevant to today's most pressing business challenges.",
+        "secondary_subhead": "Choose your competitive edge",
+        "secondary_body": "As you progress, shape your own path through electives and capstone projects. Focus areas range from circular economy strategy and AI ethics to sustainable business models and leadership for creative organizations. Whether you want to launch a venture, influence corporate sustainability, lead design-driven teams, or something totally new, the DMBA empowers you to tailor your expertise and graduate with a competitive edge in your chosen field.",
+        "pull_quote": {
+          "quote": "I learned how to connect the dots between user insights, financial models, and brand strategy. That systems-thinking approach made me indispensable.",
+          "attribution": "Meg Cain (DMBA 2014)"
+        }
+      }
+    },
+    {
+      "id": "careers",
+      "section_title": "Careers",
+      "block_type": "section_block",
+      "fields": {
+        "headline": "Hybrid leaders in high demand",
+        "subhead": "Creative strategy for the future",
+        "body": "The DMBA prepares you for complex, hybrid roles that few programs can match. You'll leave with the skills and portfolio to consult on innovation strategy, launch your own venture, or step into leadership at the intersection of design and business. With experience gained from work with real clients and interdisciplinary studios, you'll graduate with the confidence to navigate uncertainty and drive impact wherever you go.",
+        "secondary_subhead": "What's next for DMBA grads?",
+        "secondary_body": "Our alumni are shaping strategy at Google and Adobe, leading global circular economy initiatives at Autodesk, building brands for Fortune 100 companies, and founding startups recognized by Time and Fast Company. Some move into consulting, others into product or brand leadership, and many launch ventures in fields like biotech, sustainability, and consumer tech.",
+        "alumni_stories": [
+          {
+            "name": "Justin Lokitz (MBA Design Strategy 2014)",
+            "url": "https://www.cca.edu/newsroom/value-of-dmba/"
+          },
+          {
+            "name": "Jo Marini (MBA Design Strategy 2019)",
+            "url": "https://www.cca.edu/newsroom/design-strategy-problem-solving/"
+          },
+          {
+            "name": "Archit Hari (MBA Design Strategy 2019)",
+            "url": "https://www.linkedin.com/in/archithari/"
+          },
+          {
+            "name": "Laura Ogle (MBA Design Strategy 2021)",
+            "url": "https://www.linkedin.com/in/lauraogle/"
+          },
+          {
+            "name": "Femi Corazon (MBA Design Strategy 2019)",
+            "url": "https://www.linkedin.com/in/femicorazon/"
+          },
+          {
+            "name": "Armando Samoza (MBA Design Strategy 2023)",
+            "url": "https://www.linkedin.com/in/armandosomoza/"
+          },
+          {
+            "name": "Yves Louis (MBA Design Strategy 2024)",
+            "url": "https://www.linkedin.com/in/yveslouise/"
+          },
+          {
+            "name": "Isaac Buwembo (MBA Design Strategy 2014)",
+            "url": "https://www.cca.edu/newsroom/profiles-in-design-2023/"
+          },
+          {
+            "name": "Rio Cruz Morales (MBA Design Strategy 2014)",
+            "url": "https://www.linkedin.com/in/rio-cruz-morales/"
+          },
+          {
+            "name": "Alida Draudt (MBA Design Strategy 2016)",
+            "url": "https://www.cca.edu/newsroom/design-strategy-alumni-q-alida-draudt-futurist-capital-one/"
+          },
+          {
+            "name": "Eryn Bathke (MFA Design 2021, DMBA 2022) & Amira Selim (DMBA 2022)",
+            "url": "https://www.cca.edu/newsroom/sewing-connections/"
+          },
+          {
+            "name": "Megan Moyer (MBA Design Strategy 2015)",
+            "url": "https://www.cca.edu/newsroom/alum-spotlight-designer-megan-moyer/"
+          }
+        ]
+      }
+    },
+    {
+      "id": "news_events",
+      "section_title": "News & Events",
+      "block_type": "section_block",
+      "fields": {
+        "headline": "Grow your network",
+        "subhead": "Meet practitioners turning ideas into impact",
+        "body": "Connect with innovators shaping design and business during studio and seminar visits and throughout our semester-long lecture series.",
+        "cta": {
+          "label": "View upcoming DMBA events",
+          "url": "https://portal.cca.edu/events-calendar/?programs[0]=Graduate%20Design%20Strategy%20Program"
+        }
+      }
+    },
+    {
+      "id": "how_to_apply",
+      "section_title": "How to Apply",
+      "block_type": "section_block",
+      "fields": {
+        "headline": "Join a community of driven creatives",
+        "body": "The CCA DMBA program is built for curious, adaptable professionals who want to turn uncertainty into opportunity. Whether you're a designer ready to lead, a strategist eager to build, or an entrepreneur driven to launch, this program gives you the tools, mentorship, and valuable practice to make it real. At CCA, you'll join a welcoming, interdisciplinary culture that blends design, business, and leadership\u2014and graduate ready to drive change on your own terms.",
+        "cta": {
+          "label": "Learn about graduate admissions",
+          "url": "https://www.cca.edu/admissions/graduate/"
+        }
+      }
+    }
+  ]
+}

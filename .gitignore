@@ -1,0 +1,6 @@
+.env
+screenshots/
+docs/*.md
+.rodney/
+*.png
+*.pdf
