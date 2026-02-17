@@ -47,6 +47,30 @@ uvx rodney --help >/dev/null 2>&1 || true
 uvx showboat --help >/dev/null 2>&1 || true
 
 # -------------------------------------------------------
+# Write .env file (credentials rotated after each use)
+# -------------------------------------------------------
+
+ENV_FILE="$CLAUDE_PROJECT_DIR/.env"
+if [ ! -f "$ENV_FILE" ]; then
+  cat > "$ENV_FILE" <<'ENVEOF'
+# Wagtail Admin
+WAGTAIL_ADMIN_URL=https://ccaedu-staging.cca.edu/admin
+WAGTAIL_USERNAME=automation.account.jrl
+WAGTAIL_PASSWORD=catdogcatdog
+
+# Page Creation
+PARENT_PAGE_ID=11
+PAGE_TYPE_APP_LABEL=academics
+PAGE_TYPE_MODEL=programpage
+
+# Rodney Settings
+RODNEY_LOCAL=false
+SCREENSHOT_DIR=./screenshots
+ENVEOF
+  echo ".env written."
+fi
+
+# -------------------------------------------------------
 # Configure environment for headless Chrome in containers
 # -------------------------------------------------------
 
