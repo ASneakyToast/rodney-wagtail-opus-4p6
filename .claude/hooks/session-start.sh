@@ -58,27 +58,22 @@ uvx rodney --help >/dev/null 2>&1 || true
 uvx showboat --help >/dev/null 2>&1 || true
 
 # -------------------------------------------------------
-# Write .env file (credentials rotated after each use)
+# Write .env file from sandbox environment variables
 # -------------------------------------------------------
 
 ENV_FILE="$CLAUDE_PROJECT_DIR/.env"
 if [ ! -f "$ENV_FILE" ]; then
-  cat > "$ENV_FILE" <<'ENVEOF'
-# Wagtail Admin
-WAGTAIL_ADMIN_URL=https://ccaedu-staging.cca.edu/admin
-WAGTAIL_USERNAME=automation.account.jrl
-WAGTAIL_PASSWORD=catdogcatdog
-
-# Page Creation
-PARENT_PAGE_ID=11
-PAGE_TYPE_APP_LABEL=academics
-PAGE_TYPE_MODEL=programpage
-
-# Rodney Settings
-RODNEY_LOCAL=false
-SCREENSHOT_DIR=./screenshots
+  cat > "$ENV_FILE" <<ENVEOF
+WAGTAIL_ADMIN_URL=${WAGTAIL_ADMIN_URL:-}
+WAGTAIL_USERNAME=${WAGTAIL_USERNAME:-}
+WAGTAIL_PASSWORD=${WAGTAIL_PASSWORD:-}
+PARENT_PAGE_ID=${PARENT_PAGE_ID:-}
+PAGE_TYPE_APP_LABEL=${PAGE_TYPE_APP_LABEL:-}
+PAGE_TYPE_MODEL=${PAGE_TYPE_MODEL:-}
+RODNEY_LOCAL=${RODNEY_LOCAL:-false}
+SCREENSHOT_DIR=${SCREENSHOT_DIR:-./screenshots}
 ENVEOF
-  echo ".env written."
+  echo ".env written from sandbox environment variables."
 fi
 
 # -------------------------------------------------------
@@ -86,7 +81,6 @@ fi
 # -------------------------------------------------------
 
 if [ -n "${CLAUDE_ENV_FILE:-}" ]; then
-  echo 'export RODNEY_LOCAL=false' >> "$CLAUDE_ENV_FILE"
   if [ -n "${ROD_CHROME_BIN:-}" ]; then
     echo "export ROD_CHROME_BIN=$ROD_CHROME_BIN" >> "$CLAUDE_ENV_FILE"
   fi
