@@ -17,7 +17,18 @@ if ! command -v jq &>/dev/null; then
 fi
 
 # Google Chrome — required by Rodney (drives Chrome via DevTools Protocol)
-if ! command -v google-chrome &>/dev/null && ! command -v chromium-browser &>/dev/null; then
+# The container has Playwright's Chromium at a known path. Rodney (go-rod) needs
+# ROD_CHROME_BIN to find it. Fallback: try installing google-chrome-stable.
+PLAYWRIGHT_CHROME="/root/.cache/ms-playwright/chromium-1194/chrome-linux/chrome"
+if [ -x "$PLAYWRIGHT_CHROME" ]; then
+  # Copy to go-rod's expected location so rodney can find it
+  ROD_BROWSER_DIR="$HOME/.cache/rod/browser/1321438/chrome-linux"
+  if [ ! -x "$ROD_BROWSER_DIR/chrome" ]; then
+    mkdir -p "$ROD_BROWSER_DIR"
+    cp -a "$(dirname "$PLAYWRIGHT_CHROME")/"* "$ROD_BROWSER_DIR/"
+  fi
+  export ROD_CHROME_BIN="$ROD_BROWSER_DIR/chrome"
+elif ! command -v google-chrome &>/dev/null && ! command -v chromium-browser &>/dev/null; then
   sudo apt-get update -qq
   sudo apt-get install -y -qq wget gnupg
   wget -q -O - https://dl.google.com/linux/linux_signing_key.pub | sudo gpg --dearmor -o /usr/share/keyrings/google-chrome.gpg
@@ -76,6 +87,9 @@ fi
 
 if [ -n "${CLAUDE_ENV_FILE:-}" ]; then
   echo 'export RODNEY_LOCAL=false' >> "$CLAUDE_ENV_FILE"
+  if [ -n "${ROD_CHROME_BIN:-}" ]; then
+    echo "export ROD_CHROME_BIN=$ROD_CHROME_BIN" >> "$CLAUDE_ENV_FILE"
+  fi
 fi
 
 echo "Session start hook complete: jq, Chrome, uv, rodney, showboat ready."

@@ -2,9 +2,9 @@
 # discovery/run-all.sh -- Run all discovery phase scripts in sequence
 set -euo pipefail
 
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-source "$SCRIPT_DIR/../config/env.sh"
-source "$SCRIPT_DIR/../lib/rodney-helpers.sh"
+DISCOVERY_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$DISCOVERY_DIR/../config/env.sh"
+source "$DISCOVERY_DIR/../lib/rodney-helpers.sh"
 
 echo "========================================"
 echo "  Wagtail Discovery Phase"
@@ -13,7 +13,7 @@ echo "========================================"
 echo ""
 
 ensure_browser
-trap '$RODNEY_CMD stop 2>/dev/null || true' EXIT
+# Browser cleanup handled by the caller
 
 for script in \
     01-login-and-explore.sh \
@@ -26,7 +26,7 @@ for script in \
     echo "========================================="
     echo "  Running discovery/${script}"
     echo "========================================="
-    bash "$SCRIPT_DIR/$script"
+    bash "$DISCOVERY_DIR/$script"
 
     # Screenshot between steps for full documentation
     take_named_screenshot "discovery-after-${script%.sh}"

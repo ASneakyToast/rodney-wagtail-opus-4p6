@@ -2,9 +2,9 @@
 # create/run-all.sh -- Run all creation phase scripts in sequence
 set -euo pipefail
 
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-source "$SCRIPT_DIR/../config/env.sh"
-source "$SCRIPT_DIR/../lib/rodney-helpers.sh"
+CREATE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$CREATE_DIR/../config/env.sh"
+source "$CREATE_DIR/../lib/rodney-helpers.sh"
 
 echo "========================================"
 echo "  Wagtail Content Creation Phase"
@@ -14,7 +14,7 @@ echo "========================================"
 echo ""
 
 ensure_browser
-trap '$RODNEY_CMD stop 2>/dev/null || true' EXIT
+# Browser cleanup handled by the caller
 
 SCRIPTS=(
     01-login.sh
@@ -41,7 +41,7 @@ for script in "${SCRIPTS[@]}"; do
     echo "  [${current}/${total}] Running create/${script}"
     echo "========================================="
 
-    if ! bash "$SCRIPT_DIR/$script"; then
+    if ! bash "$CREATE_DIR/$script"; then
         echo ""
         echo "  [FAILED] create/${script} failed!" >&2
         echo "  Stopping. Fix the issue and re-run from this step:" >&2
