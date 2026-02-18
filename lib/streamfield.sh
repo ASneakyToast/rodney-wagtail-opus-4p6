@@ -74,22 +74,57 @@ streamfield_delete_block() {
     $RODNEY_CMD waitstable
 }
 
+# Count only ACTIVE (non-deleted) blocks in a StreamField
+streamfield_count_active_blocks() {
+    local field_contentpath="$1"
+    $RODNEY_CMD js "
+        (() => {
+            const container = document.querySelector('[data-contentpath=\"${field_contentpath}\"]');
+            if (!container) return '0';
+            const sc = container.querySelector('[data-streamfield-stream-container]');
+            if (!sc) return '0';
+            const blocks = sc.querySelectorAll(':scope > [data-contentpath]');
+            let active = 0;
+            blocks.forEach(b => {
+                const delInput = b.querySelector('input[name*=\"-deleted\"]');
+                if (!delInput || delInput.value !== '1') active++;
+            });
+            return String(active);
+        })()
+    " 2>/dev/null || echo "0"
+}
+
 # Delete ALL blocks in a StreamField (clears the field for fresh content)
+# Uses direct DOM manipulation to mark blocks as deleted (reliable across Wagtail versions)
 # Usage: streamfield_clear_all_blocks "body"
 streamfield_clear_all_blocks() {
     local field_contentpath="$1"
     local count
-    count=$(streamfield_count_blocks "$field_contentpath")
-    echo "  Clearing ${count} existing blocks from ${field_contentpath}..."
+    count=$(streamfield_count_active_blocks "$field_contentpath")
+    echo "  Clearing ${count} active blocks from ${field_contentpath}..."
 
-    # Delete from last to first to avoid index shifting
-    while [[ "$count" -gt 0 ]]; do
-        local block_sel
-        block_sel=$(streamfield_get_last_block "$field_contentpath" 2>/dev/null) || break
-        streamfield_delete_block "$block_sel"
-        count=$(streamfield_count_blocks "$field_contentpath")
-    done
-    echo "  Cleared. Remaining blocks: $(streamfield_count_blocks "$field_contentpath")"
+    # Mark all non-deleted blocks as deleted via JS (most reliable approach)
+    local cleared
+    cleared=$($RODNEY_CMD js "
+        (() => {
+            const container = document.querySelector('[data-contentpath=\"${field_contentpath}\"]');
+            if (!container) return '0';
+            const sc = container.querySelector('[data-streamfield-stream-container]');
+            if (!sc) return '0';
+            const blocks = sc.querySelectorAll(':scope > [data-contentpath]');
+            let count = 0;
+            blocks.forEach(block => {
+                const delInput = block.querySelector('input[name*=\"-deleted\"]');
+                if (delInput && delInput.value !== '1') {
+                    delInput.value = '1';
+                    block.style.display = 'none';
+                    count++;
+                }
+            });
+            return String(count);
+        })()
+    " 2>/dev/null || echo "0")
+    echo "  Cleared ${cleared} blocks. Active remaining: $(streamfield_count_active_blocks "$field_contentpath")"
 }
 
 # =====================================================
@@ -164,7 +199,7 @@ streamfield_count_blocks() {
     " 2>/dev/null || echo "0"
 }
 
-# Get a CSS selector for the last (most recently added) block in a StreamField.
+# Get a CSS selector for the last ACTIVE (non-deleted) block in a StreamField.
 # Returns a selector using the block's UUID contentpath.
 streamfield_get_last_block() {
     local field_contentpath="$1"
@@ -172,12 +207,17 @@ streamfield_get_last_block() {
     uuid=$($RODNEY_CMD js "
         (() => {
             const blocks = document.querySelectorAll('[data-contentpath=\"${field_contentpath}\"] [data-streamfield-stream-container] > [data-contentpath]');
-            return blocks.length ? blocks[blocks.length - 1].getAttribute('data-contentpath') : '';
+            let last = null;
+            blocks.forEach(b => {
+                const delInput = b.querySelector('input[name*=\"-deleted\"]');
+                if (!delInput || delInput.value !== '1') last = b;
+            });
+            return last ? last.getAttribute('data-contentpath') : '';
         })()
     " 2>/dev/null || echo "")
 
     if [[ -z "$uuid" ]]; then
-        echo "  [error] No blocks found in ${field_contentpath}" >&2
+        echo "  [error] No active blocks found in ${field_contentpath}" >&2
         return 1
     fi
 

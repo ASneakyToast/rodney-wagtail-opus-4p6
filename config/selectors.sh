@@ -15,9 +15,6 @@ SEL_SIDEBAR='.sidebar-menu-item'
 SEL_ADD_CHILD_PAGE='a[href*="add_subpage"]'
 SEL_PAGE_LISTING='.listing tbody'
 
-# --- Page type selection ---
-SEL_PAGE_TYPE_LINK='a[href*="add/standardpages/infopage/"]'
-
 # --- Page edit form ---
 SEL_PAGE_TITLE='#id_title'
 SEL_PAGE_SLUG='#id_slug'
@@ -33,8 +30,11 @@ SEL_SUCCESS_MESSAGE='.messages .success'
 
 # --- StreamField ---
 SEL_STREAMFIELD_BODY='[data-contentpath="body"]'
-SEL_ADD_BLOCK_BUTTON='.c-sf-add-button'
+SEL_ADD_BLOCK_BUTTON='button[title="Add"]'
 SEL_BLOCK_CHOOSER='.tippy-content'
+
+# --- Display template ---
+SEL_DISPLAY_TEMPLATE='#id_display_template'
 
 # --- Tabs ---
 SEL_TAB_CONTENT='a[href="#tab-content"]'
