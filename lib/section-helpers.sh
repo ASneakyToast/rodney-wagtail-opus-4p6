@@ -61,11 +61,14 @@ add_nav_headline_block() {
 
     if [[ "$has_subfields" == "struct" ]]; then
         # Fill nav_heading field (try common field name variants)
+        # Prioritize "heading" since that's the actual Wagtail field name for section_heading blocks
         local nav_filled="false"
-        for field_name in "nav_heading" "nav_title" "navigation_heading" "anchor" "heading"; do
-            if $RODNEY_CMD js "
-                document.querySelector('${block_sel} [data-contentpath=\"${field_name}\"]') ? 'found' : 'not-found'
-            " 2>/dev/null | grep -q "found"; then
+        for field_name in "heading" "nav_heading" "nav_title" "navigation_heading" "anchor"; do
+            local field_check
+            field_check=$($RODNEY_CMD js "
+                document.querySelector('${block_sel} [data-contentpath=\"${field_name}\"]') ? 'yes' : 'no'
+            " 2>/dev/null || echo "no")
+            if [[ "$field_check" == "yes" ]]; then
                 streamfield_fill_field "$block_sel" "$field_name" "$nav_heading"
                 nav_filled="true"
                 echo "  Nav heading set via field: ${field_name}"
@@ -78,11 +81,14 @@ add_nav_headline_block() {
         fi
 
         # Fill headline field (try common field name variants)
+        # Prioritize "subheading" since that's the actual Wagtail field name for section_heading blocks
         local headline_filled="false"
-        for field_name in "headline" "title" "label" "display_heading"; do
-            if $RODNEY_CMD js "
-                document.querySelector('${block_sel} [data-contentpath=\"${field_name}\"]') ? 'found' : 'not-found'
-            " 2>/dev/null | grep -q "found"; then
+        for field_name in "subheading" "headline" "title" "label" "display_heading"; do
+            local field_check
+            field_check=$($RODNEY_CMD js "
+                document.querySelector('${block_sel} [data-contentpath=\"${field_name}\"]') ? 'yes' : 'no'
+            " 2>/dev/null || echo "no")
+            if [[ "$field_check" == "yes" ]]; then
                 # Check if it's a Draftail (rich text) or plain input
                 local is_draftail
                 is_draftail=$($RODNEY_CMD js "
@@ -131,28 +137,28 @@ add_subhead_block() {
         return 1
     fi
 
-    # Inject via hidden input (same strategy as draftail_set_content)
+    # Inject via React component (same strategy as draftail_set_content)
     local injected
     injected=$($RODNEY_CMD js "
         (() => {
             const block = document.querySelector('${block_sel}');
             if (!block) return 'no-block';
-            const input = block.querySelector('input[type=\"hidden\"]')
-                       || block.querySelector('textarea[data-draftail-input]')
-                       || block.querySelector('textarea');
-            if (!input) return 'no-input';
-            const nativeInputValueSetter = Object.getOwnPropertyDescriptor(
-                window.HTMLInputElement.prototype, 'value'
-            )?.set || Object.getOwnPropertyDescriptor(
-                window.HTMLTextAreaElement.prototype, 'value'
-            )?.set;
-            if (nativeInputValueSetter) {
-                nativeInputValueSetter.call(input, JSON.stringify(${content_state}));
-            } else {
-                input.value = JSON.stringify(${content_state});
+            const editorEl = block.querySelector('.Draftail-Editor');
+            if (!editorEl) return 'no-editor';
+            const fiberKey = Object.keys(editorEl).find(k => k.indexOf('reactInternalInstance') > -1 || k.indexOf('reactFiber') > -1);
+            if (!fiberKey) return 'no-fiber';
+            let node = editorEl[fiberKey];
+            let inst = null;
+            for (let i = 0; i < 20; i++) {
+                if (node && node.stateNode && node.stateNode.onChange) { inst = node.stateNode; break; }
+                if (node) node = node.return; else break;
             }
-            input.dispatchEvent(new Event('input', { bubbles: true }));
-            input.dispatchEvent(new Event('change', { bubbles: true }));
+            if (!inst) return 'no-instance';
+            const cs = ${content_state};
+            const newState = window.Draftail.createEditorStateFromRaw(cs);
+            if (!newState) return 'create-failed';
+            inst.onChange(newState);
+            if (inst.saveState) inst.saveState();
             return 'ok';
         })()
     " 2>/dev/null || echo "error")
@@ -183,28 +189,28 @@ add_alumni_block() {
         return 1
     fi
 
-    # Inject via hidden input
+    # Inject via React component
     local injected
     injected=$($RODNEY_CMD js "
         (() => {
             const block = document.querySelector('${block_sel}');
             if (!block) return 'no-block';
-            const input = block.querySelector('input[type=\"hidden\"]')
-                       || block.querySelector('textarea[data-draftail-input]')
-                       || block.querySelector('textarea');
-            if (!input) return 'no-input';
-            const nativeInputValueSetter = Object.getOwnPropertyDescriptor(
-                window.HTMLInputElement.prototype, 'value'
-            )?.set || Object.getOwnPropertyDescriptor(
-                window.HTMLTextAreaElement.prototype, 'value'
-            )?.set;
-            if (nativeInputValueSetter) {
-                nativeInputValueSetter.call(input, JSON.stringify(${content_state}));
-            } else {
-                input.value = JSON.stringify(${content_state});
+            const editorEl = block.querySelector('.Draftail-Editor');
+            if (!editorEl) return 'no-editor';
+            const fiberKey = Object.keys(editorEl).find(k => k.indexOf('reactInternalInstance') > -1 || k.indexOf('reactFiber') > -1);
+            if (!fiberKey) return 'no-fiber';
+            let node = editorEl[fiberKey];
+            let inst = null;
+            for (let i = 0; i < 20; i++) {
+                if (node && node.stateNode && node.stateNode.onChange) { inst = node.stateNode; break; }
+                if (node) node = node.return; else break;
             }
-            input.dispatchEvent(new Event('input', { bubbles: true }));
-            input.dispatchEvent(new Event('change', { bubbles: true }));
+            if (!inst) return 'no-instance';
+            const cs = ${content_state};
+            const newState = window.Draftail.createEditorStateFromRaw(cs);
+            if (!newState) return 'create-failed';
+            inst.onChange(newState);
+            if (inst.saveState) inst.saveState();
             return 'ok';
         })()
     " 2>/dev/null || echo "error")
