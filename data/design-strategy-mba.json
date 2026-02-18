@@ -19,9 +19,13 @@
         "video_title": "Become a better business leader | MBA in Design Strategy",
         "secondary_subhead": "Future-forward in San Francisco",
         "secondary_body": "Our DMBA program is designed for working professionals and follows a low-residency model. During intensive weekend sessions held on campus, you'll take full advantage of our San Francisco location\u2014one of the world's most dynamic ecosystems for design, technology, and social impact. Collaborate on projects for real-world clients, ranging from global innovators like Google to community-focused startups, and develop creative leadership skills to make change at every scale.",
+        "secondary_layout": "text_with_image",
+        "secondary_image_search": "DMBA San Francisco",
+        "secondary_image_position": "right",
         "pull_quote": {
           "quote": "I didn't want an MBA that taught me how to keep up. I wanted one that helped me move differently, with more clarity, and in a way that felt aligned with where the world is heading.",
-          "attribution": "Jinney Kho (DMBA 2023)"
+          "attribution": "Jinney Kho (DMBA 2023)",
+          "image_search": "DMBA student"
         },
         "gallery_label": "Student work",
         "gallery_cta": "Show All"
@@ -43,11 +47,17 @@
         ],
         "secondary_subhead": "Specialized shops and studios",
         "secondary_body": "Bring design strategy to life with cutting-edge tools and traditional craft workshops found almost nowhere else. Experiment with interdisciplinary materials and techniques, including metal fabrication and welding, ceramics, furniture design, model-making, and more.",
+        "secondary_layout": "text_with_image",
+        "secondary_image_search": "DMBA studio",
+        "secondary_image_position": "left",
         "one_up": {
           "headline": "Help produce The DMBA podcast",
           "body": "Hosted by program chair Justin Lokitz and produced by DMBA students, \"Everything Is a Prototype\" is devoted to the pursuit of innovating human-centered solutions.",
           "cta_label": "Listen now",
-          "cta_url": "https://open.spotify.com/show/37zj9e8gh0HsUWsOC24PKn?si=365cfcd73cef472e&nd=1&dlsi=ea3be3f9bc4f4e86"
+          "cta_url": "https://open.spotify.com/show/37zj9e8gh0HsUWsOC24PKn?si=365cfcd73cef472e&nd=1&dlsi=ea3be3f9bc4f4e86",
+          "layout": "text_with_image",
+          "image_search": "DMBA podcast",
+          "image_position": "right"
         },
         "gallery_label": "Cutting-edge tools and labs"
       }
@@ -62,7 +72,10 @@
         "body": "DMBA faculty aren't career academics. They're professional practitioners leading their fields\u2014from biotech to finance, service design to sustainability ventures. Many hold senior leadership roles or run their own businesses, giving you direct access to the knowledge and methods shaping today's landscape and how markets, technologies, and cultures intersect.",
         "featured_faculty": {
           "name": "Justin Lokitz",
-          "bio": "Justin Lokitz is an entrepreneur, technologist, and co-author of the best-selling books Design a Better Business and Business Model Shifts, who has more than 25 years of experience at companies like Oracle and Autodesk. He has seen how organizations can lose sight of customer needs\u2014and how design methods restore that focus. Today, he draws on his expertise in business models, rapid prototyping, and iterative problem-solving to lead the DMBA, empower students, and build partnerships that deliver real value."
+          "bio": "Justin Lokitz is an entrepreneur, technologist, and co-author of the best-selling books Design a Better Business and Business Model Shifts, who has more than 25 years of experience at companies like Oracle and Autodesk. He has seen how organizations can lose sight of customer needs\u2014and how design methods restore that focus. Today, he draws on his expertise in business models, rapid prototyping, and iterative problem-solving to lead the DMBA, empower students, and build partnerships that deliver real value.",
+          "layout": "text_with_image",
+          "image_search": "Justin Lokitz",
+          "image_position": "left"
         },
         "cta": {
           "label": "Meet all our DMBA faculty",
@@ -83,7 +96,8 @@
         "secondary_body": "As you progress, shape your own path through electives and capstone projects. Focus areas range from circular economy strategy and AI ethics to sustainable business models and leadership for creative organizations. Whether you want to launch a venture, influence corporate sustainability, lead design-driven teams, or something totally new, the DMBA empowers you to tailor your expertise and graduate with a competitive edge in your chosen field.",
         "pull_quote": {
           "quote": "I learned how to connect the dots between user insights, financial models, and brand strategy. That systems-thinking approach made me indispensable.",
-          "attribution": "Meg Cain (DMBA 2014)"
+          "attribution": "Meg Cain (DMBA 2014)",
+          "image_search": "DMBA graduate"
         }
       }
     },
