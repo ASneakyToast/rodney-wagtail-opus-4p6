@@ -2,6 +2,135 @@
 # lib/streamfield.sh -- StreamField block interaction helpers for Wagtail 6.x
 # Source after config/env.sh, config/selectors.sh, and lib/rodney-helpers.sh
 
+# =====================================================
+# Functions for inspecting/updating EXISTING blocks
+# =====================================================
+
+# List all existing blocks in a StreamField, returning JSON array with type and contentpath
+# Usage: streamfield_list_blocks "body"
+streamfield_list_blocks() {
+    local field_contentpath="$1"
+    $RODNEY_CMD js "
+        (() => {
+            const container = document.querySelector('[data-contentpath=\"${field_contentpath}\"]');
+            if (!container) return '[]';
+            const sc = container.querySelector('[data-streamfield-stream-container]');
+            if (!sc) return '[]';
+            const blocks = sc.querySelectorAll(':scope > [data-contentpath]');
+            const result = [];
+            blocks.forEach((block, i) => {
+                const typeInput = block.querySelector('input[name\$=\"-type\"]');
+                result.push({
+                    index: i,
+                    contentpath: block.getAttribute('data-contentpath'),
+                    type: typeInput ? typeInput.value : 'unknown'
+                });
+            });
+            return JSON.stringify(result);
+        })()
+    " 2>/dev/null || echo "[]"
+}
+
+# Get CSS selector for a block by its index (0-based) within a StreamField
+# Usage: streamfield_get_block_by_index "body" 0
+streamfield_get_block_by_index() {
+    local field_contentpath="$1"
+    local index="$2"
+    local uuid
+    uuid=$($RODNEY_CMD js "
+        (() => {
+            const container = document.querySelector('[data-contentpath=\"${field_contentpath}\"]');
+            if (!container) return '';
+            const sc = container.querySelector('[data-streamfield-stream-container]');
+            if (!sc) return '';
+            const blocks = sc.querySelectorAll(':scope > [data-contentpath]');
+            if (${index} >= blocks.length) return '';
+            return blocks[${index}].getAttribute('data-contentpath');
+        })()
+    " 2>/dev/null || echo "")
+
+    if [[ -z "$uuid" ]]; then
+        echo "  [error] Block at index ${index} not found in ${field_contentpath}" >&2
+        return 1
+    fi
+
+    echo "[data-contentpath=\"${uuid}\"]"
+}
+
+# Delete a block by its selector (clicks the delete button within the block)
+# Usage: streamfield_delete_block "$block_selector"
+streamfield_delete_block() {
+    local block_selector="$1"
+    $RODNEY_CMD js "
+        (() => {
+            const block = document.querySelector('${block_selector}');
+            if (!block) return 'not-found';
+            const delBtn = block.querySelector('button[title=\"Delete\"], button[aria-label=\"Delete\"]');
+            if (delBtn) { delBtn.click(); return 'deleted'; }
+            return 'no-delete-btn';
+        })()
+    " 2>/dev/null || echo "error"
+    sleep 0.5
+    $RODNEY_CMD waitstable
+}
+
+# Count only ACTIVE (non-deleted) blocks in a StreamField
+streamfield_count_active_blocks() {
+    local field_contentpath="$1"
+    $RODNEY_CMD js "
+        (() => {
+            const container = document.querySelector('[data-contentpath=\"${field_contentpath}\"]');
+            if (!container) return '0';
+            const sc = container.querySelector('[data-streamfield-stream-container]');
+            if (!sc) return '0';
+            const blocks = sc.querySelectorAll(':scope > [data-contentpath]');
+            let active = 0;
+            blocks.forEach(b => {
+                const delInput = b.querySelector('input[name*=\"-deleted\"]');
+                if (!delInput || delInput.value !== '1') active++;
+            });
+            return String(active);
+        })()
+    " 2>/dev/null || echo "0"
+}
+
+# Delete ALL blocks in a StreamField (clears the field for fresh content)
+# Uses direct DOM manipulation to mark blocks as deleted (reliable across Wagtail versions)
+# Usage: streamfield_clear_all_blocks "body"
+streamfield_clear_all_blocks() {
+    local field_contentpath="$1"
+    local count
+    count=$(streamfield_count_active_blocks "$field_contentpath")
+    echo "  Clearing ${count} active blocks from ${field_contentpath}..."
+
+    # Mark all non-deleted blocks as deleted via JS (most reliable approach)
+    local cleared
+    cleared=$($RODNEY_CMD js "
+        (() => {
+            const container = document.querySelector('[data-contentpath=\"${field_contentpath}\"]');
+            if (!container) return '0';
+            const sc = container.querySelector('[data-streamfield-stream-container]');
+            if (!sc) return '0';
+            const blocks = sc.querySelectorAll(':scope > [data-contentpath]');
+            let count = 0;
+            blocks.forEach(block => {
+                const delInput = block.querySelector('input[name*=\"-deleted\"]');
+                if (delInput && delInput.value !== '1') {
+                    delInput.value = '1';
+                    block.style.display = 'none';
+                    count++;
+                }
+            });
+            return String(count);
+        })()
+    " 2>/dev/null || echo "0")
+    echo "  Cleared ${cleared} blocks. Active remaining: $(streamfield_count_active_blocks "$field_contentpath")"
+}
+
+# =====================================================
+# Functions for adding NEW blocks (original)
+# =====================================================
+
 # Add a new block to a StreamField (appended at the end)
 # Usage: streamfield_add_block "body" "Paragraph"
 # Block type name must match the display text in the block chooser combobox.
@@ -70,7 +199,7 @@ streamfield_count_blocks() {
     " 2>/dev/null || echo "0"
 }
 
-# Get a CSS selector for the last (most recently added) block in a StreamField.
+# Get a CSS selector for the last ACTIVE (non-deleted) block in a StreamField.
 # Returns a selector using the block's UUID contentpath.
 streamfield_get_last_block() {
     local field_contentpath="$1"
@@ -78,12 +207,17 @@ streamfield_get_last_block() {
     uuid=$($RODNEY_CMD js "
         (() => {
             const blocks = document.querySelectorAll('[data-contentpath=\"${field_contentpath}\"] [data-streamfield-stream-container] > [data-contentpath]');
-            return blocks.length ? blocks[blocks.length - 1].getAttribute('data-contentpath') : '';
+            let last = null;
+            blocks.forEach(b => {
+                const delInput = b.querySelector('input[name*=\"-deleted\"]');
+                if (!delInput || delInput.value !== '1') last = b;
+            });
+            return last ? last.getAttribute('data-contentpath') : '';
         })()
     " 2>/dev/null || echo "")
 
     if [[ -z "$uuid" ]]; then
-        echo "  [error] No blocks found in ${field_contentpath}" >&2
+        echo "  [error] No active blocks found in ${field_contentpath}" >&2
         return 1
     fi
 

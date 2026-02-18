@@ -17,8 +17,9 @@ $SHOWBOAT init "$DOC" "Verification: Design Strategy MBA Content Accuracy"
 
 $SHOWBOAT note "$DOC" "## Overview
 
-This document verifies that the published page content matches the source data file.
+This document verifies that the updated page content matches the source data file.
 
+- **Target Page ID:** ${TARGET_PAGE_ID}
 - **Data source:** data/design-strategy-mba.json
 - **Verified:** $(date '+%Y-%m-%d %H:%M:%S')"
 
@@ -35,26 +36,12 @@ $SHOWBOAT exec "$DOC" bash "
     echo 'Logged in'
 "
 
-$SHOWBOAT note "$DOC" "## Step 2: Navigate to the page edit form"
+$SHOWBOAT note "$DOC" "## Step 2: Navigate directly to the page edit form"
 
 $SHOWBOAT exec "$DOC" bash "
-    # Navigate to parent and find the page
-    $RODNEY_CMD open '${WAGTAIL_ADMIN_URL}/pages/${PARENT_PAGE_ID}/' 2>&1
+    $RODNEY_CMD open '${WAGTAIL_ADMIN_URL}/pages/${TARGET_PAGE_ID}/edit/' 2>&1
     $RODNEY_CMD waitstable 2>&1
-
-    # Click the edit button for Design Strategy MBA
-    $RODNEY_CMD js \"
-        const rows = document.querySelectorAll('.listing tbody tr');
-        const row = Array.from(rows).find(r => r.textContent.includes('Design Strategy MBA'));
-        if (row) {
-            const editBtn = row.querySelector('a[href*=\"/edit/\"]') || row.querySelector('a');
-            if (editBtn) editBtn.click();
-            'Navigating to edit form';
-        } else {
-            'Page not found in listing';
-        }
-    \" 2>&1
-    $RODNEY_CMD waitstable 2>&1
+    echo 'Opened edit form for page ${TARGET_PAGE_ID}'
 "
 
 $SHOWBOAT note "$DOC" "## Step 3: Verify page title"
@@ -83,17 +70,15 @@ for section_id in $SECTION_IDS; do
 
     $SHOWBOAT exec "$DOC" bash "
         echo 'Expected headline: ${expected_headline}'
-        # Try to find this section in the page form
         $RODNEY_CMD js \"
-            const blocks = document.querySelectorAll('[data-streamfield-block]');
+            const container = document.querySelector('[data-contentpath=\\\"body\\\"]');
+            if (!container) { 'No body container'; }
+            const inputs = container.querySelectorAll('input');
             let found = false;
-            blocks.forEach(block => {
-                const inputs = block.querySelectorAll('input');
-                inputs.forEach(input => {
-                    if (input.value.includes('${expected_headline}')) {
-                        found = true;
-                    }
-                });
+            inputs.forEach(input => {
+                if (input.value.includes('${expected_headline}')) {
+                    found = true;
+                }
             });
             found ? 'FOUND in form' : 'Not found in form inputs (may be in rich text)';
         \" 2>&1
@@ -109,7 +94,6 @@ $SHOWBOAT image "$DOC" "screenshots/verify-content-form.png"
 
 $SHOWBOAT note "$DOC" "## Cleanup"
 
-# Browser is managed externally; not stopping rodney here
 echo "  Browser left running (managed externally)"
 
 echo "  Showboat document created: $DOC"

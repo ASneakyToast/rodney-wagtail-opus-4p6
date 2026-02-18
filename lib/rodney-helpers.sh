@@ -116,7 +116,10 @@ srv.listen(18080,'127.0.0.1',()=>console.log('auth-proxy:18080'));
 
 # Start rodney if not already running
 ensure_browser() {
-    if $RODNEY_CMD status &>/dev/null; then
+    # Check if browser is actually connected (status exits 0 even when no session)
+    local status_out
+    status_out=$($RODNEY_CMD status 2>&1 || true)
+    if echo "$status_out" | grep -qi "connected\|active\|running" && ! echo "$status_out" | grep -qi "no active"; then
         echo "  [rodney] Browser already running."
     else
         echo "  [rodney] Starting browser..."

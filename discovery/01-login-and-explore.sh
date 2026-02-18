@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# discovery/01-login-and-explore.sh -- Login and explore the Wagtail page tree
+# discovery/01-login-and-explore.sh -- Login and explore the target page
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -14,29 +14,20 @@ echo "=== Discovery Step 1: Login and Explore ==="
 ensure_browser
 wagtail_login
 
-# Navigate to page explorer root
-echo "  Navigating to page explorer..."
-rodney_cmd open "${WAGTAIL_ADMIN_URL}/pages/"
-wait_for_page
-take_named_screenshot "discovery-01-page-explorer-root"
+# Navigate to the target page in the explorer
+echo "  Navigating to target page ${TARGET_PAGE_ID}..."
+navigate_to_page "$TARGET_PAGE_ID"
+take_named_screenshot "discovery-01-target-page"
 
-# Get the page tree
+# Capture the target page title
+target_title=$(safe_text 'h1, .w-header__title, header h1')
+echo "  Target page title: ${target_title:-'(not found)'}"
+
+# List child pages under the target
 echo ""
-echo "--- Page Tree ---"
+echo "--- Child Pages Under Target ---"
 get_page_tree
-echo "-----------------"
-echo ""
-
-# Navigate to the target parent page
-navigate_to_page "$PARENT_PAGE_ID"
-take_named_screenshot "discovery-01-parent-page"
-
-echo "  Listing child pages under parent ${PARENT_PAGE_ID}:"
-get_page_tree
-
-# Capture the parent page title
-parent_title=$(safe_text 'h1, .w-header__title, header h1')
-echo "  Parent page title: ${parent_title:-'(not found)'}"
+echo "--------------------------------"
 
 echo ""
 echo "=== Discovery Step 1 complete ==="
