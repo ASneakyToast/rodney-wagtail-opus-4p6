@@ -113,7 +113,8 @@ print(json.dumps(content_state))
 " "$alumni_json"
 }
 
-# Inject content into a Draftail rich text editor via its hidden input
+# Inject content into a Draftail rich text editor via React component internals.
+# This properly updates the Draft.js EditorState so content persists on form save.
 # Usage: draftail_set_content "[data-contentpath='body']" "Text content here"
 draftail_set_content() {
     local container_selector="$1"
@@ -130,48 +131,57 @@ draftail_set_content() {
         return 1
     fi
 
-    # Strategy A: Inject via hidden input
+    # Strategy A: Set via React component onChange + Draftail.createEditorStateFromRaw
     local injected
     injected=$($RODNEY_CMD js "
         (() => {
             const container = document.querySelector('${container_selector}');
             if (!container) return 'no-container';
 
-            // Find the hidden input (Draftail stores its state here)
-            const input = container.querySelector('input[type=\"hidden\"]')
-                       || container.querySelector('textarea[data-draftail-input]')
-                       || container.querySelector('textarea');
-            if (!input) return 'no-input';
+            const editorEl = container.querySelector('.Draftail-Editor');
+            if (!editorEl) return 'no-editor';
 
-            // Set the value to our ContentState JSON
-            const nativeInputValueSetter = Object.getOwnPropertyDescriptor(
-                window.HTMLInputElement.prototype, 'value'
-            )?.set || Object.getOwnPropertyDescriptor(
-                window.HTMLTextAreaElement.prototype, 'value'
-            )?.set;
+            // Find React fiber key dynamically
+            const fiberKey = Object.keys(editorEl).find(k => k.indexOf('reactInternalInstance') > -1 || k.indexOf('reactFiber') > -1);
+            if (!fiberKey) return 'no-fiber';
 
-            if (nativeInputValueSetter) {
-                nativeInputValueSetter.call(input, JSON.stringify(${content_state}));
-            } else {
-                input.value = JSON.stringify(${content_state});
+            // Traverse up to find the DraftailEditor component instance
+            let node = editorEl[fiberKey];
+            let inst = null;
+            for (let i = 0; i < 20; i++) {
+                if (node && node.stateNode && node.stateNode.onChange) {
+                    inst = node.stateNode;
+                    break;
+                }
+                if (node) node = node.return;
+                else break;
             }
+            if (!inst) return 'no-instance';
 
-            input.dispatchEvent(new Event('input', { bubbles: true }));
-            input.dispatchEvent(new Event('change', { bubbles: true }));
+            // Create EditorState from raw ContentState and apply it
+            const cs = ${content_state};
+            const newState = window.Draftail.createEditorStateFromRaw(cs);
+            if (!newState) return 'create-failed';
+
+            inst.onChange(newState);
+            if (inst.saveState) inst.saveState();
             return 'ok';
         })()
     " 2>/dev/null || echo "error")
 
     case "$injected" in
         ok)
-            echo "  Draftail content injected via hidden input."
+            echo "  Draftail content set via React EditorState."
             return 0
             ;;
         no-container)
             echo "  [warn] Container '${container_selector}' not found. Trying fallback..." >&2
             ;;
-        no-input)
-            echo "  [warn] Hidden input not found in '${container_selector}'. Trying fallback..." >&2
+        no-editor)
+            echo "  [warn] Draftail editor not found in '${container_selector}'. Trying fallback..." >&2
+            ;;
+        no-fiber|no-instance)
+            echo "  [warn] React internals not accessible (${injected}). Trying fallback..." >&2
             ;;
         *)
             echo "  [warn] Injection returned '${injected}'. Trying fallback..." >&2
@@ -225,6 +235,7 @@ draftail_type_content() {
 }
 
 # Set Draftail content from a raw ContentState JSON string (pre-built)
+# Uses React component internals to ensure content persists on save.
 draftail_set_raw_contentstate() {
     local container_selector="$1"
     local json_string="$2"
@@ -233,12 +244,22 @@ draftail_set_raw_contentstate() {
         (() => {
             const container = document.querySelector('${container_selector}');
             if (!container) return 'no-container';
-            const input = container.querySelector('input[type=\"hidden\"]')
-                       || container.querySelector('textarea');
-            if (!input) return 'no-input';
-            input.value = ${json_string};
-            input.dispatchEvent(new Event('input', { bubbles: true }));
-            input.dispatchEvent(new Event('change', { bubbles: true }));
+            const editorEl = container.querySelector('.Draftail-Editor');
+            if (!editorEl) return 'no-editor';
+            const fiberKey = Object.keys(editorEl).find(k => k.indexOf('reactInternalInstance') > -1 || k.indexOf('reactFiber') > -1);
+            if (!fiberKey) return 'no-fiber';
+            let node = editorEl[fiberKey];
+            let inst = null;
+            for (let i = 0; i < 20; i++) {
+                if (node && node.stateNode && node.stateNode.onChange) { inst = node.stateNode; break; }
+                if (node) node = node.return; else break;
+            }
+            if (!inst) return 'no-instance';
+            const cs = ${json_string};
+            const newState = window.Draftail.createEditorStateFromRaw(cs);
+            if (!newState) return 'create-failed';
+            inst.onChange(newState);
+            if (inst.saveState) inst.saveState();
             return 'ok';
         })()
     "
