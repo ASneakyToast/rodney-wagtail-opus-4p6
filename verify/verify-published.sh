@@ -29,24 +29,22 @@ This document verifies that the Design Strategy MBA page is live and accessible 
 
 $SHOWBOAT note "$DOC" "## Step 1: Start browser"
 
-$SHOWBOAT exec "$DOC" bash -c "
-    $RODNEY_CMD start --local 2>&1 || true
-    sleep 2
-    echo 'Browser started'
+$SHOWBOAT exec "$DOC" bash "
+    echo 'Browser is already running, skipping start'
 "
 
 $SHOWBOAT note "$DOC" "## Step 2: Visit the published page"
 
-$SHOWBOAT exec "$DOC" bash -c "
+$SHOWBOAT exec "$DOC" bash "
     $RODNEY_CMD open '${PUBLIC_URL}/${PAGE_SLUG}/' 2>&1
     $RODNEY_CMD waitstable 2>&1
     echo 'Page loaded'
 "
 
-$SHOWBOAT exec "$DOC" bash -c "$RODNEY_CMD title 2>&1"
-$SHOWBOAT exec "$DOC" bash -c "$RODNEY_CMD url 2>&1"
+$SHOWBOAT exec "$DOC" bash "$RODNEY_CMD title 2>&1"
+$SHOWBOAT exec "$DOC" bash "$RODNEY_CMD url 2>&1"
 
-$SHOWBOAT exec "$DOC" bash -c "
+$SHOWBOAT exec "$DOC" bash "
     $RODNEY_CMD screenshot screenshots/verify-published-full.png 2>&1
     echo 'Full page screenshot saved'
 "
@@ -60,7 +58,7 @@ SECTION_IDS=$(jq -r '.sections[].id' "$SCRIPT_DIR/../data/design-strategy-mba.js
 for section_id in $SECTION_IDS; do
     expected_headline=$(jq -r ".sections[] | select(.id == \"${section_id}\") | .fields.headline" "$SCRIPT_DIR/../data/design-strategy-mba.json")
 
-    $SHOWBOAT exec "$DOC" bash -c "
+    $SHOWBOAT exec "$DOC" bash "
         result=\$($RODNEY_CMD js \"
             document.body.textContent.includes('${expected_headline}') ? 'FOUND' : 'NOT FOUND';
         \" 2>&1)
@@ -74,7 +72,7 @@ SECTIONS=("overview" "studios_shops" "faculty" "curriculum" "careers" "news_even
 for section_id in "${SECTIONS[@]}"; do
     expected_headline=$(jq -r ".sections[] | select(.id == \"${section_id}\") | .fields.headline" "$SCRIPT_DIR/../data/design-strategy-mba.json")
 
-    $SHOWBOAT exec "$DOC" bash -c "
+    $SHOWBOAT exec "$DOC" bash "
         # Try to scroll to the section and take a screenshot
         $RODNEY_CMD js \"
             const headings = document.querySelectorAll('h1, h2, h3, h4');
@@ -96,7 +94,8 @@ done
 
 $SHOWBOAT note "$DOC" "## Cleanup"
 
-$SHOWBOAT exec "$DOC" bash -c "$RODNEY_CMD stop 2>&1 || true"
+# Browser is managed externally; not stopping rodney here
+echo "  Browser left running (managed externally)"
 
 echo "  Showboat document created: $DOC"
 echo "=== Published page verification complete ==="

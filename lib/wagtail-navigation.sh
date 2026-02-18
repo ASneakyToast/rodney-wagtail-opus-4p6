@@ -55,7 +55,8 @@ navigate_to_create_page() {
     local model="${3:-$PAGE_TYPE_MODEL}"
 
     echo "  Navigating directly to create page form..."
-    rodney_cmd open "${WAGTAIL_ADMIN_URL}/pages/${parent_id}/add/${app_label}/${model}/"
+    # Wagtail URL pattern: /admin/pages/add/{app}/{model}/{parent_id}/
+    rodney_cmd open "${WAGTAIL_ADMIN_URL}/pages/add/${app_label}/${model}/${parent_id}/"
     wait_for_page
 }
 

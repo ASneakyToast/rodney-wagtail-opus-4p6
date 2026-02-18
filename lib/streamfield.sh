@@ -2,96 +2,59 @@
 # lib/streamfield.sh -- StreamField block interaction helpers for Wagtail 6.x
 # Source after config/env.sh, config/selectors.sh, and lib/rodney-helpers.sh
 
-# Add a new block to a StreamField
-# Usage: streamfield_add_block "body" "section_block"
+# Add a new block to a StreamField (appended at the end)
+# Usage: streamfield_add_block "body" "Paragraph"
+# Block type name must match the display text in the block chooser combobox.
 streamfield_add_block() {
     local field_contentpath="$1"
     local block_type="$2"
-    local container="[data-contentpath=\"${field_contentpath}\"]"
 
     echo "  Adding StreamField block: ${block_type} to ${field_contentpath}..."
 
-    # Find and click the add-block button. Wagtail 6.x uses several patterns:
-    # 1. A "+" button with data-streamfield-block-* attributes
-    # 2. A button within the StreamField container
+    # Click the LAST add-block button to append (buttons are interspersed between blocks)
+    local clicked
+    clicked=$($RODNEY_CMD js "
+        (() => {
+            const container = document.querySelector('[data-contentpath=\"${field_contentpath}\"]');
+            if (!container) return 'no-container';
+            const btns = container.querySelectorAll('.c-sf-add-button');
+            if (!btns.length) return 'no-button';
+            btns[btns.length - 1].click();
+            return 'clicked';
+        })()
+    " 2>/dev/null || echo "error")
 
-    # Try the most common pattern: the last "+" button in the container (appends)
-    local add_btn_selector="${container} [data-streamfield-block-count] + button"
-
-    # Fallback: try generic "add block" button patterns
-    if ! element_exists "$add_btn_selector"; then
-        add_btn_selector="${container} button[title*='Add']"
-    fi
-    if ! element_exists "$add_btn_selector"; then
-        add_btn_selector="${container} button[title*='Insert']"
-    fi
-    if ! element_exists "$add_btn_selector"; then
-        add_btn_selector="${container} button.c-sf-add-button"
-    fi
-    if ! element_exists "$add_btn_selector"; then
-        # Last resort: use discovered selector from config
-        if [[ -n "${SEL_ADD_BLOCK_BUTTON:-}" ]]; then
-            add_btn_selector="${container} ${SEL_ADD_BLOCK_BUTTON}"
-        else
-            echo "  [error] Cannot find add-block button in ${container}" >&2
-            take_named_screenshot "error-no-add-block-btn"
-            return 1
-        fi
+    if [[ "$clicked" != "clicked" ]]; then
+        echo "  [error] Cannot click add-block button: ${clicked}" >&2
+        take_named_screenshot "error-no-add-block-btn"
+        return 1
     fi
 
-    rodney_wait_and_click "$add_btn_selector"
+    sleep 1
     $RODNEY_CMD waitstable
 
-    # Now select the block type from the chooser.
-    # Wagtail 6.x uses a Tippy.js popover or inline buttons.
-    local block_btn=""
+    # Wagtail 6.x uses a combobox (w-combobox) for block selection.
+    # Select the block type by matching option text.
+    local selected
+    selected=$($RODNEY_CMD js "
+        (() => {
+            const options = document.querySelectorAll('.w-combobox__option');
+            for (const opt of options) {
+                const text = opt.querySelector('.w-combobox__option-text');
+                if (text && text.textContent.trim() === '${block_type}') {
+                    opt.click();
+                    return 'selected';
+                }
+            }
+            return 'not_found';
+        })()
+    " 2>/dev/null || echo "error")
 
-    # Pattern 1: button with data-block-type attribute
-    block_btn="button[data-block-type=\"${block_type}\"]"
-    if element_exists "$block_btn"; then
-        rodney_cmd click "$block_btn"
+    if [[ "$selected" == "selected" ]]; then
+        sleep 1
         $RODNEY_CMD waitstable
         echo "  Block '${block_type}' added."
         return 0
-    fi
-
-    # Pattern 2: button inside .tippy-content
-    block_btn=".tippy-content button[data-block-type=\"${block_type}\"]"
-    if element_exists "$block_btn"; then
-        rodney_cmd click "$block_btn"
-        $RODNEY_CMD waitstable
-        echo "  Block '${block_type}' added."
-        return 0
-    fi
-
-    # Pattern 3: button with text matching the block type
-    local found
-    found=$($RODNEY_CMD js "
-        const btns = document.querySelectorAll('.tippy-content button, [data-contentpath=\"${field_contentpath}\"] button');
-        const match = Array.from(btns).find(b => b.textContent.trim().toLowerCase().includes('${block_type}'.replace('_', ' ')));
-        match ? 'found' : 'notfound';
-    " 2>/dev/null || echo "notfound")
-
-    if [[ "$found" == "found" ]]; then
-        $RODNEY_CMD js "
-            const btns = document.querySelectorAll('.tippy-content button, [data-contentpath=\"${field_contentpath}\"] button');
-            const match = Array.from(btns).find(b => b.textContent.trim().toLowerCase().includes('${block_type}'.replace('_', ' ')));
-            if (match) match.click();
-        "
-        $RODNEY_CMD waitstable
-        echo "  Block '${block_type}' added (text match)."
-        return 0
-    fi
-
-    # Pattern 4: use discovered chooser selector
-    if [[ -n "${SEL_BLOCK_CHOOSER:-}" ]]; then
-        block_btn="${SEL_BLOCK_CHOOSER} button[data-block-type=\"${block_type}\"]"
-        if element_exists "$block_btn"; then
-            rodney_cmd click "$block_btn"
-            $RODNEY_CMD waitstable
-            echo "  Block '${block_type}' added (discovered chooser)."
-            return 0
-        fi
     fi
 
     echo "  [error] Could not find block type '${block_type}' in chooser." >&2
@@ -103,40 +66,102 @@ streamfield_add_block() {
 streamfield_count_blocks() {
     local field_contentpath="$1"
     $RODNEY_CMD js "
-        document.querySelectorAll('[data-contentpath=\"${field_contentpath}\"] [data-streamfield-block]').length
+        document.querySelector('[data-contentpath=\"${field_contentpath}\"]')?.querySelector('input[data-streamfield-stream-count]')?.value || '0'
     " 2>/dev/null || echo "0"
 }
 
-# Get a CSS selector for the last (most recently added) block in a StreamField
+# Get a CSS selector for the last (most recently added) block in a StreamField.
+# Returns a selector using the block's UUID contentpath.
 streamfield_get_last_block() {
     local field_contentpath="$1"
-    local count
-    count=$(streamfield_count_blocks "$field_contentpath")
+    local uuid
+    uuid=$($RODNEY_CMD js "
+        (() => {
+            const blocks = document.querySelectorAll('[data-contentpath=\"${field_contentpath}\"] [data-streamfield-stream-container] > [data-contentpath]');
+            return blocks.length ? blocks[blocks.length - 1].getAttribute('data-contentpath') : '';
+        })()
+    " 2>/dev/null || echo "")
 
-    if [[ "$count" == "0" ]]; then
-        echo "[data-contentpath=\"${field_contentpath}\"]"
+    if [[ -z "$uuid" ]]; then
+        echo "  [error] No blocks found in ${field_contentpath}" >&2
+        return 1
+    fi
+
+    echo "[data-contentpath=\"${uuid}\"]"
+}
+
+# Fill the primary value input of a simple (CharBlock) StreamField block.
+# For blocks like Heading that have a single text input named "body-N-value".
+streamfield_fill_value() {
+    local block_selector="$1"
+    local value="$2"
+
+    local selector="${block_selector} input[name\$='-value']:not([type=hidden])"
+    if element_exists "$selector"; then
+        rodney_safe_input "$selector" "$value"
     else
-        echo "[data-contentpath=\"${field_contentpath}\"] [data-streamfield-block]:last-child"
+        echo "  [warn] Value input not found in block ${block_selector}" >&2
     fi
 }
 
-# Fill a sub-field within a StreamField block
-# Usage: streamfield_fill_field "body" "headline" "Some headline text"
+# Fill a sub-field within a StructBlock
+# Usage: streamfield_fill_field "$block_selector" "headline" "Some text"
 streamfield_fill_field() {
     local parent_selector="$1"
     local field_name="$2"
     local value="$3"
 
-    local selector="${parent_selector} [data-contentpath=\"${field_name}\"] input"
-
-    # Try input first, then textarea
-    if ! element_exists "$selector"; then
-        selector="${parent_selector} [data-contentpath=\"${field_name}\"] textarea"
-    fi
-
+    # Try data-contentpath first (StructBlock sub-fields)
+    local selector="${parent_selector} [data-contentpath=\"${field_name}\"] input:not([type=hidden])"
     if element_exists "$selector"; then
         rodney_safe_input "$selector" "$value"
+        return
+    fi
+
+    # Try textarea
+    selector="${parent_selector} [data-contentpath=\"${field_name}\"] textarea"
+    if element_exists "$selector"; then
+        rodney_safe_input "$selector" "$value"
+        return
+    fi
+
+    # Try name-based matching (body-N-value-fieldname pattern)
+    selector="${parent_selector} input[name\$='-${field_name}']:not([type=hidden])"
+    if element_exists "$selector"; then
+        rodney_safe_input "$selector" "$value"
+        return
+    fi
+
+    echo "  [warn] Field '${field_name}' not found in block." >&2
+}
+
+# Fill a Draftail (rich text) editor within a StreamField block
+# For RichTextBlocks (e.g., Paragraph), the editor is directly in the block.
+# For StructBlock sub-fields, specify the field name.
+streamfield_fill_draftail() {
+    local parent_selector="$1"
+    local field_name="$2"
+    local text="$3"
+
+    local draftail_selector
+    if [[ -n "$field_name" ]]; then
+        draftail_selector="${parent_selector} [data-contentpath=\"${field_name}\"]"
     else
-        echo "  [warn] Field '${field_name}' not found in block." >&2
+        draftail_selector="${parent_selector}"
+    fi
+
+    # Use draftail_set_content if available
+    if declare -f draftail_set_content &>/dev/null; then
+        draftail_set_content "$draftail_selector" "$text"
+    else
+        # Fallback: click the editor and type
+        local editor="${draftail_selector} .public-DraftEditor-content"
+        if element_exists "$editor"; then
+            $RODNEY_CMD click "$editor"
+            sleep 0.5
+            $RODNEY_CMD input "$editor" "$text"
+        else
+            echo "  [warn] Draftail editor not found at ${draftail_selector}" >&2
+        fi
     fi
 }

@@ -50,10 +50,12 @@ rodney_safe_input() {
     rodney_cmd clear "$selector"
     rodney_cmd input "$selector" "$text"
 
-    # Verify the value was set correctly
+    # Verify the value was set correctly (skip if selector has JS-unfriendly chars)
     local actual
-    actual=$($RODNEY_CMD js "document.querySelector('${selector}').value")
-    if [[ "$actual" != "$text" ]]; then
+    local escaped_sel
+    escaped_sel=$(printf '%s' "$selector" | sed "s/'/\\\\'/g")
+    actual=$($RODNEY_CMD js "document.querySelector('${escaped_sel}')?.value || ''" 2>/dev/null || echo "")
+    if [[ -n "$actual" ]] && [[ "$actual" != "$text" ]]; then
         echo "  [warn] Field $selector: expected '${text:0:40}...' but got '${actual:0:40}...'" >&2
         # Retry once: clear and re-input
         rodney_cmd clear "$selector"
@@ -70,17 +72,93 @@ take_named_screenshot() {
     echo "$filename"
 }
 
+# Start a local auth proxy that relays to the upstream egress proxy with JWT creds.
+# Required when Chrome cannot embed proxy credentials directly.
+_start_auth_proxy() {
+    # Skip if already running
+    if [[ -n "${_AUTH_PROXY_PID:-}" ]] && kill -0 "$_AUTH_PROXY_PID" 2>/dev/null; then
+        return 0
+    fi
+
+    local proxy_url="${HTTPS_PROXY:-${HTTP_PROXY:-}}"
+    [[ -z "$proxy_url" ]] && return 0  # no proxy configured
+
+    # Parse upstream host/port from proxy URL
+    local upstream_host upstream_port
+    upstream_host=$(echo "$proxy_url" | sed -E 's|.*@([^:]+):([0-9]+).*|\1|')
+    upstream_port=$(echo "$proxy_url" | sed -E 's|.*@([^:]+):([0-9]+).*|\2|')
+
+    [[ -z "$upstream_host" || -z "$upstream_port" ]] && return 0
+
+    # Extract user:pass from proxy URL for Basic auth
+    local proxy_userinfo
+    proxy_userinfo=$(echo "$proxy_url" | sed -E 's|https?://([^@]+)@.*|\1|')
+
+    node -e "
+const http = require('http'), net = require('net');
+const UH = '$upstream_host', UP = $upstream_port;
+const auth = Buffer.from(decodeURIComponent('$proxy_userinfo'.split(':')[0]) + ':' + decodeURIComponent('$proxy_userinfo'.split(':').slice(1).join(':'))).toString('base64');
+const srv = http.createServer((req, res) => {
+  const pr = http.request({host:UH,port:UP,method:req.method,path:req.url,headers:{...req.headers,'Proxy-Authorization':'Basic '+auth}}, p => { res.writeHead(p.statusCode,p.headers); p.pipe(res); });
+  req.pipe(pr); pr.on('error', e => { res.writeHead(502); res.end(); });
+});
+srv.on('connect',(req,clt,head) => {
+  const s = net.connect(UP,UH,()=>{ s.write('CONNECT '+req.url+' HTTP/1.1\r\nHost: '+req.url+'\r\nProxy-Authorization: Basic '+auth+'\r\n\r\n'); });
+  s.once('data',d => { if(d.toString().includes('200')){clt.write('HTTP/1.1 200 Connection Established\r\n\r\n');s.write(head);s.pipe(clt);clt.pipe(s);}else{clt.end();s.end();}});
+  s.on('error',()=>{clt.end();});
+});
+srv.listen(18080,'127.0.0.1',()=>console.log('auth-proxy:18080'));
+" &>/dev/null &
+    _AUTH_PROXY_PID=$!
+    sleep 2
+    echo "  [rodney] Auth proxy started (PID $_AUTH_PROXY_PID, port 18080)"
+}
+
 # Start rodney if not already running
 ensure_browser() {
     if $RODNEY_CMD status &>/dev/null; then
         echo "  [rodney] Browser already running."
     else
         echo "  [rodney] Starting browser..."
-        if [[ "${RODNEY_LOCAL:-false}" == "true" ]]; then
-            $RODNEY_CMD start --local
-        else
-            $RODNEY_CMD start
+
+        # Start auth proxy if behind an egress proxy with embedded credentials
+        _start_auth_proxy
+
+        local CHROME_BIN
+        CHROME_BIN=$(command -v google-chrome 2>/dev/null \
+                  || command -v chromium 2>/dev/null \
+                  || command -v chromium-browser 2>/dev/null \
+                  || echo "/root/.cache/ms-playwright/chromium-1194/chrome-linux/chrome")
+
+        local connect_flag=""
+        [[ "${RODNEY_LOCAL:-false}" == "true" ]] && connect_flag="--local"
+
+        # Try rodney start first
+        if $RODNEY_CMD start $connect_flag 2>/dev/null; then
+            sleep 2
+            return 0
         fi
+
+        echo "  [rodney] rodney start failed, launching Chrome manually..."
+
+        # Build Chrome flags
+        local chrome_flags=(
+            --headless --no-sandbox --disable-gpu
+            --remote-debugging-port=9222
+            --disable-dev-shm-usage
+            --no-first-run --disable-default-apps
+            --user-data-dir=/tmp/rodney-chrome-profile
+        )
+
+        # Route through local auth proxy if it's running
+        if [[ -n "${_AUTH_PROXY_PID:-}" ]] && kill -0 "$_AUTH_PROXY_PID" 2>/dev/null; then
+            chrome_flags+=(--proxy-server="http://127.0.0.1:18080" --ignore-certificate-errors)
+        fi
+
+        "$CHROME_BIN" "${chrome_flags[@]}" &>/dev/null &
+        sleep 4
+
+        $RODNEY_CMD connect localhost:9222 $connect_flag
         sleep 2
     fi
 }
