@@ -194,9 +194,10 @@ add_nav_headline_block "$section_title" "$headline"
 [[ -n "$sec_body" ]] && add_paragraph_block "$sec_body"
 
 # Alumni stories as linked paragraph block
+alumni_label=$(section_field "$section_json" ".fields.alumni_stories_label")
 alumni_json=$(echo "$section_json" | jq -c '.fields.alumni_stories // empty')
 if [[ -n "$alumni_json" ]] && [[ "$alumni_json" != "null" ]]; then
-    add_subhead_block "Alumni Stories" "header-four"
+    add_subhead_block "${alumni_label:-Success stories}" "header-four"
     add_alumni_block "$alumni_json"
 fi
 take_named_screenshot "update-06-careers"

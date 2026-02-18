@@ -1,6 +1,7 @@
 {
   "page": {
     "title": "Design Strategy MBA",
+    "subhead": "Stand out with a hybrid business skillset of creativity, strategy, and leadership.",
     "slug": "design-strategy-mba",
     "seo_title": "Design Strategy MBA | CCA",
     "search_description": "CCA's two-year, low-residency Design Strategy MBA equips students with hybrid skills in design thinking, business strategy, and leadership."
@@ -22,7 +23,8 @@
           "quote": "I didn't want an MBA that taught me how to keep up. I wanted one that helped me move differently, with more clarity, and in a way that felt aligned with where the world is heading.",
           "attribution": "Jinney Kho (DMBA 2023)"
         },
-        "gallery_label": "Student work"
+        "gallery_label": "Student work",
+        "gallery_cta": "Show All"
       }
     },
     {
@@ -95,6 +97,7 @@
         "body": "The DMBA prepares you for complex, hybrid roles that few programs can match. You'll leave with the skills and portfolio to consult on innovation strategy, launch your own venture, or step into leadership at the intersection of design and business. With experience gained from work with real clients and interdisciplinary studios, you'll graduate with the confidence to navigate uncertainty and drive impact wherever you go.",
         "secondary_subhead": "What's next for DMBA grads?",
         "secondary_body": "Our alumni are shaping strategy at Google and Adobe, leading global circular economy initiatives at Autodesk, building brands for Fortune 100 companies, and founding startups recognized by Time and Fast Company. Some move into consulting, others into product or brand leadership, and many launch ventures in fields like biotech, sustainability, and consumer tech.",
+        "alumni_stories_label": "Success stories",
         "alumni_stories": [
           {
             "name": "Justin Lokitz (MBA Design Strategy 2014)",

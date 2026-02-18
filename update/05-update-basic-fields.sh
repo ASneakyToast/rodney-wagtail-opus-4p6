@@ -12,6 +12,7 @@ DATA_FILE="$SCRIPT_DIR/../data/design-strategy-mba.json"
 echo "=== Update Step 5: Update Basic Fields ==="
 
 PAGE_TITLE=$(jq -r '.page.title' "$DATA_FILE")
+PAGE_SUBHEAD=$(jq -r '.page.subhead // empty' "$DATA_FILE")
 PAGE_SLUG=$(jq -r '.page.slug' "$DATA_FILE")
 SEO_TITLE=$(jq -r '.page.seo_title // empty' "$DATA_FILE")
 SEARCH_DESC=$(jq -r '.page.search_description // empty' "$DATA_FILE")
@@ -44,6 +45,37 @@ if [[ "$title_exists" == "yes" ]]; then
     fi
 else
     echo "  [info] Title field not found on Content tab."
+fi
+
+# Update page subhead (may be a field like #id_subhead, #id_subtitle, etc.)
+if [[ -n "$PAGE_SUBHEAD" ]]; then
+    subhead_set="false"
+    for subhead_sel in '#id_subhead' '#id_subtitle' '#id_sub_title' '#id_page_subhead'; do
+        subhead_exists=$($RODNEY_CMD js "document.querySelector('${subhead_sel}') ? 'yes' : 'no'" 2>/dev/null || echo "no")
+        if [[ "$subhead_exists" == "yes" ]]; then
+            echo "  Setting page subhead via ${subhead_sel}: ${PAGE_SUBHEAD}"
+            rodney_safe_input "$subhead_sel" "$PAGE_SUBHEAD"
+            subhead_set="true"
+            break
+        fi
+    done
+    # Also try data-contentpath based selector
+    if [[ "$subhead_set" == "false" ]]; then
+        subhead_exists=$($RODNEY_CMD js "document.querySelector('[data-contentpath=\"subhead\"] input, [data-contentpath=\"subtitle\"] input') ? 'yes' : 'no'" 2>/dev/null || echo "no")
+        if [[ "$subhead_exists" == "yes" ]]; then
+            sel=$($RODNEY_CMD js "
+                (document.querySelector('[data-contentpath=\"subhead\"] input') || document.querySelector('[data-contentpath=\"subtitle\"] input')).name
+            " 2>/dev/null || echo "")
+            if [[ -n "$sel" ]]; then
+                echo "  Setting page subhead via contentpath input: ${PAGE_SUBHEAD}"
+                rodney_safe_input "input[name='${sel}']" "$PAGE_SUBHEAD"
+                subhead_set="true"
+            fi
+        fi
+    fi
+    if [[ "$subhead_set" == "false" ]]; then
+        echo "  [info] Page subhead field not found on Content tab. Will check other tabs."
+    fi
 fi
 
 sleep 1
