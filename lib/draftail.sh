@@ -37,6 +37,82 @@ print(json.dumps(content_state))
 " "$text"
 }
 
+# Convert text to Draft.js ContentState JSON with a specific heading level (h3, h4, etc.)
+# Usage: heading_to_contentstate "Subhead text" "header-three"
+heading_to_contentstate() {
+    local text="$1"
+    local block_type="${2:-header-three}"
+
+    python3 -c "
+import json, sys, hashlib
+
+text = sys.argv[1]
+block_type = sys.argv[2]
+
+key = hashlib.md5(b'heading0').hexdigest()[:5]
+blocks = [{
+    'key': key,
+    'text': text.strip(),
+    'type': block_type,
+    'depth': 0,
+    'inlineStyleRanges': [],
+    'entityRanges': [],
+    'data': {}
+}]
+
+content_state = {'blocks': blocks, 'entityMap': {}}
+print(json.dumps(content_state))
+" "$text" "$block_type"
+}
+
+# Convert a list of alumni stories (name + URL pairs) to Draft.js ContentState with links
+# Input: JSON array string, e.g. '[{"name":"...", "url":"..."},...]'
+# Output: ContentState JSON with each alumni as a linked paragraph
+alumni_to_contentstate() {
+    local alumni_json="$1"
+
+    python3 -c "
+import json, sys, hashlib
+
+alumni = json.loads(sys.argv[1])
+blocks = []
+entity_map = {}
+entity_key = 0
+
+for i, alum in enumerate(alumni):
+    name = alum.get('name', '')
+    url = alum.get('url', '')
+    key = hashlib.md5(f'alumni{i}'.encode()).hexdigest()[:5]
+
+    entity_ranges = []
+    if url:
+        entity_map[str(entity_key)] = {
+            'type': 'LINK',
+            'mutability': 'MUTABLE',
+            'data': {'url': url}
+        }
+        entity_ranges.append({
+            'offset': 0,
+            'length': len(name),
+            'key': entity_key
+        })
+        entity_key += 1
+
+    blocks.append({
+        'key': key,
+        'text': name,
+        'type': 'unstyled',
+        'depth': 0,
+        'inlineStyleRanges': [],
+        'entityRanges': entity_ranges,
+        'data': {}
+    })
+
+content_state = {'blocks': blocks, 'entityMap': entity_map}
+print(json.dumps(content_state))
+" "$alumni_json"
+}
+
 # Inject content into a Draftail rich text editor via its hidden input
 # Usage: draftail_set_content "[data-contentpath='body']" "Text content here"
 draftail_set_content() {
