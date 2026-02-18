@@ -233,9 +233,13 @@ add_paragraph_block() {
 }
 
 # Add a Quote block (may be CharBlock or StructBlock - we'll detect)
+# Usage: add_quote_block "quote text" "attribution" ["image_search_term"]
+# If image_search_term is provided AND the Quote block has an image field,
+# we'll try to find and attach an image from the Wagtail media library.
 add_quote_block() {
     local quotation="$1"
     local citation_name="${2:-}"
+    local image_search="${3:-}"
 
     streamfield_add_block "body" "Quote"
     local block_sel
@@ -253,6 +257,11 @@ add_quote_block() {
         if [[ -n "$citation_name" ]]; then
             streamfield_fill_field "$block_sel" "citation_name" "$citation_name"
         fi
+
+        # Try to set the optional image field if a search term was provided
+        if [[ -n "$image_search" ]]; then
+            _try_quote_image "$block_sel" "$image_search"
+        fi
     else
         # CharBlock - combine quote and attribution
         local quote_text="$quotation"
@@ -261,6 +270,143 @@ add_quote_block() {
         fi
         echo "  Quote (char): \"${quote_text:0:60}...\""
         streamfield_fill_value "$block_sel" "$quote_text"
+    fi
+}
+
+# Internal: attempt to set an image on a Quote block's optional image field.
+# Tries common field names (image, photo, portrait, headshot).
+# Fails silently if no image field exists.
+_try_quote_image() {
+    local block_sel="$1"
+    local search_term="$2"
+
+    # Only attempt if image-helpers.sh is loaded
+    if ! declare -f choose_image_for_field &>/dev/null; then
+        echo "  [info] Image helpers not loaded, skipping quote image"
+        return 0
+    fi
+
+    # Try common image field names
+    for field_name in "image" "photo" "portrait" "headshot" "author_image"; do
+        local field_exists
+        field_exists=$(has_image_field "$block_sel" "$field_name")
+        if [[ "$field_exists" == "yes" ]]; then
+            echo "  Quote has image field: '${field_name}' — selecting image..."
+            if choose_image_for_field "$block_sel" "$field_name" "$search_term"; then
+                return 0
+            else
+                echo "  [warn] Could not set quote image, continuing without it" >&2
+                return 0
+            fi
+        fi
+    done
+
+    echo "  [info] Quote block has no image field (or field not detected)"
+}
+
+# Add a Text with Image block (StructBlock with text + image + optional position)
+# This block type creates a rich visual layout pairing body text with an image.
+# Usage: add_text_with_image_block "body text" "image_search_term" ["left"|"right"]
+add_text_with_image_block() {
+    local text="$1"
+    local image_search="$2"
+    local image_position="${3:-}"  # left or right, if the block supports it
+
+    # Try the exact block type name — discovery will confirm the real name.
+    # Common names: "Text with image", "Image with text", "Text and image"
+    local block_added="false"
+    for block_name in "Text with image" "Image with text" "Text and image" "Text + Image"; do
+        if streamfield_add_block "body" "$block_name" 2>/dev/null; then
+            block_added="true"
+            echo "  Text-with-image block added as: '${block_name}'"
+            break
+        fi
+    done
+
+    if [[ "$block_added" != "true" ]]; then
+        echo "  [warn] No text-with-image block type found, falling back to Paragraph" >&2
+        add_paragraph_block "$text"
+        return 0
+    fi
+
+    local block_sel
+    block_sel=$(streamfield_get_last_block "body")
+
+    # Discover the block's fields dynamically
+    local fields_json
+    fields_json=$(list_block_fields "$block_sel" 2>/dev/null || echo "[]")
+    echo "  Text-with-image fields: ${fields_json}"
+
+    # Fill the text/body field (try common names)
+    local text_filled="false"
+    for field_name in "text" "body" "content" "paragraph" "description"; do
+        local field_check
+        field_check=$($RODNEY_CMD js "
+            document.querySelector('${block_sel} [data-contentpath=\"${field_name}\"]') ? 'yes' : 'no'
+        " 2>/dev/null || echo "no")
+
+        if [[ "$field_check" == "yes" ]]; then
+            # Check if it's a Draftail (rich text) field
+            local is_draftail
+            is_draftail=$($RODNEY_CMD js "
+                document.querySelector('${block_sel} [data-contentpath=\"${field_name}\"] .Draftail-Editor') ? 'draftail' : 'plain'
+            " 2>/dev/null || echo "plain")
+
+            if [[ "$is_draftail" == "draftail" ]]; then
+                draftail_set_content "${block_sel} [data-contentpath=\"${field_name}\"]" "$text"
+            else
+                streamfield_fill_field "$block_sel" "$field_name" "$text"
+            fi
+            text_filled="true"
+            echo "  Text set via field: ${field_name}"
+            break
+        fi
+    done
+
+    if [[ "$text_filled" != "true" ]]; then
+        echo "  [warn] Could not find text field in text-with-image block" >&2
+    fi
+
+    # Fill the image field
+    if declare -f choose_image_for_field &>/dev/null; then
+        for field_name in "image" "photo" "picture" "media"; do
+            local img_exists
+            img_exists=$(has_image_field "$block_sel" "$field_name")
+            if [[ "$img_exists" == "yes" ]]; then
+                choose_image_for_field "$block_sel" "$field_name" "$image_search" || true
+                break
+            fi
+        done
+    fi
+
+    # Set image position if supported
+    if [[ -n "$image_position" ]]; then
+        for field_name in "image_position" "position" "alignment" "layout"; do
+            local pos_check
+            pos_check=$($RODNEY_CMD js "
+                document.querySelector('${block_sel} [data-contentpath=\"${field_name}\"] select') ? 'yes' : 'no'
+            " 2>/dev/null || echo "no")
+            if [[ "$pos_check" == "yes" ]]; then
+                $RODNEY_CMD js "
+                    (() => {
+                        const sel = document.querySelector('${block_sel} [data-contentpath=\"${field_name}\"] select');
+                        if (!sel) return 'no-select';
+                        // Try to find the option matching our desired position
+                        for (const opt of sel.options) {
+                            if (opt.value.toLowerCase().includes('${image_position}') ||
+                                opt.textContent.toLowerCase().includes('${image_position}')) {
+                                sel.value = opt.value;
+                                sel.dispatchEvent(new Event('change', { bubbles: true }));
+                                return 'set';
+                            }
+                        }
+                        return 'option-not-found';
+                    })()
+                " 2>/dev/null || true
+                echo "  Image position '${image_position}' set via field: ${field_name}"
+                break
+            fi
+        done
     fi
 }
 

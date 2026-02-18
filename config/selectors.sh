@@ -23,7 +23,7 @@ SEL_EDIT_FORM='#page-edit-form'
 # --- Action buttons ---
 SEL_ACTION_PUBLISH='button[name="action-publish"]'
 SEL_ACTION_DRAFT='.action-save [name="action-draft"]'
-SEL_ACTION_MENU_TOGGLE='.dropdown-toggle'
+SEL_ACTION_MENU_TOGGLE='.w-dropdown__toggle.button'
 
 # --- Success messages ---
 SEL_SUCCESS_MESSAGE='.messages .success'
