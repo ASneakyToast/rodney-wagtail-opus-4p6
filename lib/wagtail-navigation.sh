@@ -10,6 +10,14 @@ navigate_to_page() {
     wait_for_page
 }
 
+# Navigate to the EDIT form of an existing page by ID
+navigate_to_edit_page() {
+    local page_id="${1:-$TARGET_PAGE_ID}"
+    echo "  Navigating to edit page $page_id..."
+    rodney_cmd open "${WAGTAIL_ADMIN_URL}/pages/${page_id}/edit/"
+    wait_for_page
+}
+
 # Navigate to the "Add child page" screen for a given parent
 navigate_to_add_subpage() {
     local parent_id="${1:-$PARENT_PAGE_ID}"

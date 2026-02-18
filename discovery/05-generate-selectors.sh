@@ -1,13 +1,22 @@
 #!/usr/bin/env bash
 # discovery/05-generate-selectors.sh -- Generate selectors config from discovery
+# Updated: queries the edit form of the existing page (not a create form)
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "$SCRIPT_DIR/../config/env.sh"
+source "$SCRIPT_DIR/../lib/rodney-helpers.sh"
+source "$SCRIPT_DIR/../lib/wagtail-navigation.sh"
 
 echo "=== Discovery Step 5: Generate Selectors ==="
 
 SELECTORS_FILE="$SCRIPT_DIR/../config/selectors.sh"
+
+# Ensure we're on the edit form so we can query DOM
+if ! element_exists '#page-edit-form' 2>/dev/null; then
+    echo "  Navigating to edit form for selector discovery..."
+    navigate_to_edit_page "$TARGET_PAGE_ID"
+fi
 
 # Collect discovered information from the live DOM
 echo "  Querying DOM for selector patterns..."
@@ -43,14 +52,6 @@ CHOOSER_SEL=$($RODNEY_CMD js "
     })()
 " 2>/dev/null || echo "")
 
-# Get the page type link selector
-PAGE_TYPE_SEL=$($RODNEY_CMD js "
-    (() => {
-        const link = document.querySelector('a[href*=\"add/${PAGE_TYPE_APP_LABEL}/${PAGE_TYPE_MODEL}/\"]');
-        return link ? 'a[href*=\"add/${PAGE_TYPE_APP_LABEL}/${PAGE_TYPE_MODEL}/\"]' : '';
-    })()
-" 2>/dev/null || echo "")
-
 # Get the publish button selector
 PUBLISH_SEL=$($RODNEY_CMD js "
     (() => {
@@ -65,11 +66,30 @@ PUBLISH_SEL=$($RODNEY_CMD js "
     })()
 " 2>/dev/null || echo "")
 
+# Discover display_template selector
+DISPLAY_TEMPLATE_SEL=$($RODNEY_CMD js "
+    (() => {
+        const byId = document.querySelector('#id_display_template');
+        if (byId) return '#id_display_template';
+        const byName = document.querySelector('[name=\"display_template\"]');
+        if (byName) return '[name=\"display_template\"]';
+        // Search more broadly
+        const allSelects = document.querySelectorAll('select');
+        for (const sel of allSelects) {
+            if ((sel.id || '').toLowerCase().includes('template') ||
+                (sel.name || '').toLowerCase().includes('template')) {
+                return sel.id ? '#' + sel.id : '[name=\"' + sel.name + '\"]';
+            }
+        }
+        return '';
+    })()
+" 2>/dev/null || echo "")
+
 echo "  Discovered selectors:"
 echo "    Add block button: ${ADD_BTN_SEL:-'(not found)'}"
 echo "    Block chooser: ${CHOOSER_SEL:-'(not found)'}"
-echo "    Page type link: ${PAGE_TYPE_SEL:-'(not found)'}"
 echo "    Publish button: ${PUBLISH_SEL:-'(not found)'}"
+echo "    Display template: ${DISPLAY_TEMPLATE_SEL:-'(not found)'}"
 
 # Write updated selectors file
 echo "  Writing updated selectors to ${SELECTORS_FILE}..."
@@ -92,13 +112,6 @@ SEL_SIDEBAR='.sidebar-menu-item'
 SEL_ADD_CHILD_PAGE='a[href*="add_subpage"]'
 SEL_PAGE_LISTING='.listing tbody'
 
-# --- Page type selection ---
-SELEOF
-
-echo "SEL_PAGE_TYPE_LINK='${PAGE_TYPE_SEL}'" >> "$SELECTORS_FILE"
-
-cat >> "$SELECTORS_FILE" << 'SELEOF'
-
 # --- Page edit form ---
 SEL_PAGE_TITLE='#id_title'
 SEL_PAGE_SLUG='#id_slug'
@@ -110,7 +123,7 @@ SELEOF
 if [[ -n "$PUBLISH_SEL" ]]; then
     echo "SEL_ACTION_PUBLISH='${PUBLISH_SEL}'" >> "$SELECTORS_FILE"
 else
-    echo "SEL_ACTION_PUBLISH='.action-save [name=\"action-publish\"]'" >> "$SELECTORS_FILE"
+    echo "SEL_ACTION_PUBLISH='button[name=\"action-publish\"]'" >> "$SELECTORS_FILE"
 fi
 
 cat >> "$SELECTORS_FILE" << 'SELEOF'
@@ -126,6 +139,15 @@ SELEOF
 
 echo "SEL_ADD_BLOCK_BUTTON='${ADD_BTN_SEL}'" >> "$SELECTORS_FILE"
 echo "SEL_BLOCK_CHOOSER='${CHOOSER_SEL}'" >> "$SELECTORS_FILE"
+
+# --- Display template ---
+echo "" >> "$SELECTORS_FILE"
+echo "# --- Display template ---" >> "$SELECTORS_FILE"
+if [[ -n "$DISPLAY_TEMPLATE_SEL" ]]; then
+    echo "SEL_DISPLAY_TEMPLATE='${DISPLAY_TEMPLATE_SEL}'" >> "$SELECTORS_FILE"
+else
+    echo "SEL_DISPLAY_TEMPLATE='#id_display_template'" >> "$SELECTORS_FILE"
+fi
 
 cat >> "$SELECTORS_FILE" << 'SELEOF'
 

@@ -2,6 +2,100 @@
 # lib/streamfield.sh -- StreamField block interaction helpers for Wagtail 6.x
 # Source after config/env.sh, config/selectors.sh, and lib/rodney-helpers.sh
 
+# =====================================================
+# Functions for inspecting/updating EXISTING blocks
+# =====================================================
+
+# List all existing blocks in a StreamField, returning JSON array with type and contentpath
+# Usage: streamfield_list_blocks "body"
+streamfield_list_blocks() {
+    local field_contentpath="$1"
+    $RODNEY_CMD js "
+        (() => {
+            const container = document.querySelector('[data-contentpath=\"${field_contentpath}\"]');
+            if (!container) return '[]';
+            const sc = container.querySelector('[data-streamfield-stream-container]');
+            if (!sc) return '[]';
+            const blocks = sc.querySelectorAll(':scope > [data-contentpath]');
+            const result = [];
+            blocks.forEach((block, i) => {
+                const typeInput = block.querySelector('input[name\$=\"-type\"]');
+                result.push({
+                    index: i,
+                    contentpath: block.getAttribute('data-contentpath'),
+                    type: typeInput ? typeInput.value : 'unknown'
+                });
+            });
+            return JSON.stringify(result);
+        })()
+    " 2>/dev/null || echo "[]"
+}
+
+# Get CSS selector for a block by its index (0-based) within a StreamField
+# Usage: streamfield_get_block_by_index "body" 0
+streamfield_get_block_by_index() {
+    local field_contentpath="$1"
+    local index="$2"
+    local uuid
+    uuid=$($RODNEY_CMD js "
+        (() => {
+            const container = document.querySelector('[data-contentpath=\"${field_contentpath}\"]');
+            if (!container) return '';
+            const sc = container.querySelector('[data-streamfield-stream-container]');
+            if (!sc) return '';
+            const blocks = sc.querySelectorAll(':scope > [data-contentpath]');
+            if (${index} >= blocks.length) return '';
+            return blocks[${index}].getAttribute('data-contentpath');
+        })()
+    " 2>/dev/null || echo "")
+
+    if [[ -z "$uuid" ]]; then
+        echo "  [error] Block at index ${index} not found in ${field_contentpath}" >&2
+        return 1
+    fi
+
+    echo "[data-contentpath=\"${uuid}\"]"
+}
+
+# Delete a block by its selector (clicks the delete button within the block)
+# Usage: streamfield_delete_block "$block_selector"
+streamfield_delete_block() {
+    local block_selector="$1"
+    $RODNEY_CMD js "
+        (() => {
+            const block = document.querySelector('${block_selector}');
+            if (!block) return 'not-found';
+            const delBtn = block.querySelector('button[title=\"Delete\"], button[aria-label=\"Delete\"]');
+            if (delBtn) { delBtn.click(); return 'deleted'; }
+            return 'no-delete-btn';
+        })()
+    " 2>/dev/null || echo "error"
+    sleep 0.5
+    $RODNEY_CMD waitstable
+}
+
+# Delete ALL blocks in a StreamField (clears the field for fresh content)
+# Usage: streamfield_clear_all_blocks "body"
+streamfield_clear_all_blocks() {
+    local field_contentpath="$1"
+    local count
+    count=$(streamfield_count_blocks "$field_contentpath")
+    echo "  Clearing ${count} existing blocks from ${field_contentpath}..."
+
+    # Delete from last to first to avoid index shifting
+    while [[ "$count" -gt 0 ]]; do
+        local block_sel
+        block_sel=$(streamfield_get_last_block "$field_contentpath" 2>/dev/null) || break
+        streamfield_delete_block "$block_sel"
+        count=$(streamfield_count_blocks "$field_contentpath")
+    done
+    echo "  Cleared. Remaining blocks: $(streamfield_count_blocks "$field_contentpath")"
+}
+
+# =====================================================
+# Functions for adding NEW blocks (original)
+# =====================================================
+
 # Add a new block to a StreamField (appended at the end)
 # Usage: streamfield_add_block "body" "Paragraph"
 # Block type name must match the display text in the block chooser combobox.

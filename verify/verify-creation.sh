@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# verify/verify-creation.sh -- Showboat document proving the page was created
+# verify/verify-creation.sh -- Showboat document proving the page was updated
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -10,15 +10,14 @@ SHOWBOAT="${SHOWBOAT_CMD:-uvx showboat}"
 DOC="$SCRIPT_DIR/../docs/verify-creation.md"
 mkdir -p "$(dirname "$DOC")"
 
-echo "=== Verification: Page Creation ==="
+echo "=== Verification: Page Update ==="
 
-$SHOWBOAT init "$DOC" "Verification: Design Strategy MBA Page Creation"
+$SHOWBOAT init "$DOC" "Verification: Design Strategy MBA Page Update"
 
 $SHOWBOAT note "$DOC" "## Environment
 
 - **Admin URL:** ${WAGTAIL_ADMIN_URL}
-- **Parent Page ID:** ${PARENT_PAGE_ID}
-- **Page Type:** ${PAGE_TYPE_APP_LABEL}.${PAGE_TYPE_MODEL}
+- **Target Page ID:** ${TARGET_PAGE_ID}
 - **Verified:** $(date '+%Y-%m-%d %H:%M:%S')"
 
 $SHOWBOAT note "$DOC" "## Step 1: Start browser and login"
@@ -39,43 +38,12 @@ $SHOWBOAT exec "$DOC" bash "
 
 $SHOWBOAT exec "$DOC" bash "$RODNEY_CMD title"
 
-$SHOWBOAT note "$DOC" "## Step 2: Navigate to parent page and verify child exists"
+$SHOWBOAT note "$DOC" "## Step 2: Navigate directly to target page edit form"
 
 $SHOWBOAT exec "$DOC" bash "
-    $RODNEY_CMD open '${WAGTAIL_ADMIN_URL}/pages/${PARENT_PAGE_ID}/' 2>&1
+    $RODNEY_CMD open '${WAGTAIL_ADMIN_URL}/pages/${TARGET_PAGE_ID}/edit/' 2>&1
     $RODNEY_CMD waitstable 2>&1
-    echo '--- Page listing ---'
-    $RODNEY_CMD text '.listing tbody' 2>&1 || echo '(no listing found)'
-"
-
-$SHOWBOAT exec "$DOC" bash "
-    $RODNEY_CMD screenshot screenshots/verify-page-explorer.png 2>&1
-    echo 'Screenshot saved'
-"
-
-$SHOWBOAT image "$DOC" "screenshots/verify-page-explorer.png"
-
-$SHOWBOAT note "$DOC" "## Step 3: Verify page title in listing"
-
-$SHOWBOAT exec "$DOC" bash "
-    # Search for the Design Strategy MBA page in the listing
-    $RODNEY_CMD js \"
-        const rows = document.querySelectorAll('.listing tbody tr');
-        const found = Array.from(rows).find(r => r.textContent.includes('Design Strategy MBA'));
-        found ? 'FOUND: ' + found.querySelector('a')?.textContent?.trim() : 'NOT FOUND in page listing';
-    \" 2>&1
-"
-
-$SHOWBOAT note "$DOC" "## Step 4: Open the page edit view"
-
-$SHOWBOAT exec "$DOC" bash "
-    # Click into the Design Strategy MBA page
-    $RODNEY_CMD js \"
-        const links = document.querySelectorAll('.listing a');
-        const link = Array.from(links).find(a => a.textContent.includes('Design Strategy MBA'));
-        if (link) { link.click(); 'Clicked page link'; } else { 'Page link not found'; }
-    \" 2>&1
-    $RODNEY_CMD waitstable 2>&1
+    echo 'Opened edit form for page ${TARGET_PAGE_ID}'
 "
 
 $SHOWBOAT exec "$DOC" bash "
@@ -85,9 +53,34 @@ $SHOWBOAT exec "$DOC" bash "
 
 $SHOWBOAT image "$DOC" "screenshots/verify-page-edit.png"
 
+$SHOWBOAT note "$DOC" "## Step 3: Verify page title matches"
+
+$SHOWBOAT exec "$DOC" bash "
+    title=\$($RODNEY_CMD js \"document.querySelector('#id_title')?.value || 'not found'\" 2>&1)
+    echo \"Page title: \${title}\"
+    if echo \"\$title\" | grep -qi 'Design Strategy MBA'; then
+        echo 'PASS: Title contains Design Strategy MBA'
+    else
+        echo 'INFO: Title is set to a different value'
+    fi
+"
+
+$SHOWBOAT note "$DOC" "## Step 4: Verify StreamField body has content"
+
+$SHOWBOAT exec "$DOC" bash "
+    count=\$($RODNEY_CMD js \"
+        document.querySelector('[data-contentpath=\\\"body\\\"]')?.querySelector('input[data-streamfield-stream-count]')?.value || '0'
+    \" 2>&1)
+    echo \"StreamField block count: \${count}\"
+    if [ \"\$count\" -gt 0 ] 2>/dev/null; then
+        echo 'PASS: Body has content blocks'
+    else
+        echo 'WARN: No blocks found in body StreamField'
+    fi
+"
+
 $SHOWBOAT note "$DOC" "## Cleanup"
 
-# Browser is managed externally; not stopping rodney here
 echo "  Browser left running (managed externally)"
 
 echo "  Showboat document created: $DOC"

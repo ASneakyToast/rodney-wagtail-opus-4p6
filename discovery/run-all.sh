@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 # discovery/run-all.sh -- Run all discovery phase scripts in sequence
+# Updated for the page UPDATE workflow (inspects existing page, not blank create form)
 set -euo pipefail
 
 DISCOVERY_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -7,8 +8,9 @@ source "$DISCOVERY_DIR/../config/env.sh"
 source "$DISCOVERY_DIR/../lib/rodney-helpers.sh"
 
 echo "========================================"
-echo "  Wagtail Discovery Phase"
+echo "  Wagtail Discovery Phase (Update Mode)"
 echo "  Target: ${WAGTAIL_ADMIN_URL}"
+echo "  Page ID: ${TARGET_PAGE_ID}"
 echo "========================================"
 echo ""
 

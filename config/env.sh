@@ -34,9 +34,14 @@ require_var() {
 require_var WAGTAIL_ADMIN_URL
 require_var WAGTAIL_USERNAME
 require_var WAGTAIL_PASSWORD
-require_var PARENT_PAGE_ID
-require_var PAGE_TYPE_APP_LABEL
-require_var PAGE_TYPE_MODEL
+require_var TARGET_PAGE_ID
+
+# PARENT_PAGE_ID defaults to TARGET_PAGE_ID for backward compatibility
+export PARENT_PAGE_ID="${PARENT_PAGE_ID:-$TARGET_PAGE_ID}"
+
+# PAGE_TYPE vars are optional for the update workflow (page already exists)
+export PAGE_TYPE_APP_LABEL="${PAGE_TYPE_APP_LABEL:-}"
+export PAGE_TYPE_MODEL="${PAGE_TYPE_MODEL:-}"
 
 # Strip trailing slash from admin URL for consistent path building
 export WAGTAIL_ADMIN_URL="${WAGTAIL_ADMIN_URL%/}"

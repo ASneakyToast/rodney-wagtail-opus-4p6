@@ -58,7 +58,10 @@ WAGTAIL_ADMIN_URL=https://ccaedu-staging.cca.edu/admin
 WAGTAIL_USERNAME=automation.account.jrl
 WAGTAIL_PASSWORD=catdogcatdog
 
-# Page Creation
+# Target page to update (the existing program page)
+TARGET_PAGE_ID=11
+
+# Page type info (optional for update workflow, used by legacy create scripts)
 PARENT_PAGE_ID=11
 PAGE_TYPE_APP_LABEL=academics
 PAGE_TYPE_MODEL=programpage
