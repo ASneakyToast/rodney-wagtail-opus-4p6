@@ -61,11 +61,14 @@ add_nav_headline_block() {
 
     if [[ "$has_subfields" == "struct" ]]; then
         # Fill nav_heading field (try common field name variants)
+        # Prioritize "heading" since that's the actual Wagtail field name for section_heading blocks
         local nav_filled="false"
-        for field_name in "nav_heading" "nav_title" "navigation_heading" "anchor" "heading"; do
-            if $RODNEY_CMD js "
-                document.querySelector('${block_sel} [data-contentpath=\"${field_name}\"]') ? 'found' : 'not-found'
-            " 2>/dev/null | grep -q "found"; then
+        for field_name in "heading" "nav_heading" "nav_title" "navigation_heading" "anchor"; do
+            local field_check
+            field_check=$($RODNEY_CMD js "
+                document.querySelector('${block_sel} [data-contentpath=\"${field_name}\"]') ? 'yes' : 'no'
+            " 2>/dev/null || echo "no")
+            if [[ "$field_check" == "yes" ]]; then
                 streamfield_fill_field "$block_sel" "$field_name" "$nav_heading"
                 nav_filled="true"
                 echo "  Nav heading set via field: ${field_name}"
@@ -78,11 +81,14 @@ add_nav_headline_block() {
         fi
 
         # Fill headline field (try common field name variants)
+        # Prioritize "subheading" since that's the actual Wagtail field name for section_heading blocks
         local headline_filled="false"
-        for field_name in "headline" "title" "label" "display_heading"; do
-            if $RODNEY_CMD js "
-                document.querySelector('${block_sel} [data-contentpath=\"${field_name}\"]') ? 'found' : 'not-found'
-            " 2>/dev/null | grep -q "found"; then
+        for field_name in "subheading" "headline" "title" "label" "display_heading"; do
+            local field_check
+            field_check=$($RODNEY_CMD js "
+                document.querySelector('${block_sel} [data-contentpath=\"${field_name}\"]') ? 'yes' : 'no'
+            " 2>/dev/null || echo "no")
+            if [[ "$field_check" == "yes" ]]; then
                 # Check if it's a Draftail (rich text) or plain input
                 local is_draftail
                 is_draftail=$($RODNEY_CMD js "

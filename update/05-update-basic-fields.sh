@@ -32,13 +32,17 @@ if [[ "$title_exists" == "yes" ]]; then
     if [[ "$current_title" != "$PAGE_TITLE" ]]; then
         # Use JS to set value directly (avoids visibility/wait issues)
         $RODNEY_CMD js "
-            const el = document.querySelector('${SEL_PAGE_TITLE}');
-            if (el) {
-                el.value = '${PAGE_TITLE}';
-                el.dispatchEvent(new Event('input', { bubbles: true }));
-                el.dispatchEvent(new Event('change', { bubbles: true }));
-            }
-        " 2>/dev/null
+            (() => {
+                const el = document.querySelector('${SEL_PAGE_TITLE}');
+                if (el) {
+                    el.value = '${PAGE_TITLE}';
+                    el.dispatchEvent(new Event('input', { bubbles: true }));
+                    el.dispatchEvent(new Event('change', { bubbles: true }));
+                    return 'ok';
+                }
+                return 'not-found';
+            })()
+        " 2>/dev/null || true
         echo "  Title updated."
     else
         echo "  Title already correct, skipping."
@@ -50,7 +54,7 @@ fi
 # Update page subhead (may be a field like #id_subhead, #id_subtitle, etc.)
 if [[ -n "$PAGE_SUBHEAD" ]]; then
     subhead_set="false"
-    for subhead_sel in '#id_subhead' '#id_subtitle' '#id_sub_title' '#id_page_subhead'; do
+    for subhead_sel in '#id_introduction' '#id_subhead' '#id_subtitle' '#id_sub_title' '#id_page_subhead'; do
         subhead_exists=$($RODNEY_CMD js "document.querySelector('${subhead_sel}') ? 'yes' : 'no'" 2>/dev/null || echo "no")
         if [[ "$subhead_exists" == "yes" ]]; then
             echo "  Setting page subhead via ${subhead_sel}: ${PAGE_SUBHEAD}"

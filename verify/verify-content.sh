@@ -70,18 +70,7 @@ for section_id in $SECTION_IDS; do
 
     $SHOWBOAT exec "$DOC" bash "
         echo 'Expected headline: ${expected_headline}'
-        $RODNEY_CMD js \"
-            const container = document.querySelector('[data-contentpath=\\\"body\\\"]');
-            if (!container) { 'No body container'; }
-            const inputs = container.querySelectorAll('input');
-            let found = false;
-            inputs.forEach(input => {
-                if (input.value.includes('${expected_headline}')) {
-                    found = true;
-                }
-            });
-            found ? 'FOUND in form' : 'Not found in form inputs (may be in rich text)';
-        \" 2>&1
+        $RODNEY_CMD js \"(() => { var container = document.querySelector('[data-contentpath=\\\"body\\\"]'); if (!container) return 'No body container'; var inputs = container.querySelectorAll('input'); var found = false; inputs.forEach(function(input) { if (input.value.includes('${expected_headline}')) { found = true; } }); return found ? 'FOUND in form' : 'Not found in form inputs (may be in rich text)'; })()\" 2>&1
     "
 done
 
