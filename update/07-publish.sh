@@ -49,25 +49,30 @@ else
 fi
 
 # Step 2: Now publish
+# The publish button is hidden in a dropdown under "Save draft".
+# We must click the "More actions" toggle first, then JS-click the publish button
+# (using JS click avoids rodney's navigation timeout on form submission).
 echo "  Publishing page..."
 
-if element_exists "$SEL_ACTION_PUBLISH" 2>/dev/null; then
-    rodney_cmd click "$SEL_ACTION_PUBLISH"
-elif element_exists "$SEL_ACTION_MENU_TOGGLE" 2>/dev/null; then
+# Open the action dropdown to reveal Publish
+if element_exists "$SEL_ACTION_MENU_TOGGLE" 2>/dev/null; then
     rodney_cmd click "$SEL_ACTION_MENU_TOGGLE"
-    $RODNEY_CMD waitstable
+    sleep 1
+    $RODNEY_CMD waitstable 2>/dev/null || true
+fi
 
-    if element_exists "$SEL_ACTION_PUBLISH" 2>/dev/null; then
-        rodney_cmd click "$SEL_ACTION_PUBLISH"
-    else
-        $RODNEY_CMD js "
-            const btns = document.querySelectorAll('button');
-            const pub = Array.from(btns).find(b => b.textContent.trim().toLowerCase().includes('publish'));
-            if (pub) pub.click();
-        "
-    fi
-else
-    echo "  [error] Publish button not found!" >&2
+# Click publish via JS (rodney click times out waiting for navigation after form submit)
+publish_result=$($RODNEY_CMD js "
+    (() => {
+        const btn = document.querySelector('button[name=\"action-publish\"]');
+        if (!btn) return 'no-publish-btn';
+        btn.click();
+        return 'clicked';
+    })()
+" 2>/dev/null || echo "error")
+
+if [[ "$publish_result" != "clicked" ]]; then
+    echo "  [error] Publish button not found or click failed: ${publish_result}" >&2
     take_named_screenshot "error-no-publish-button"
     exit 1
 fi
