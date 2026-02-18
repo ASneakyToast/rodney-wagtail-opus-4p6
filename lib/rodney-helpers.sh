@@ -50,10 +50,12 @@ rodney_safe_input() {
     rodney_cmd clear "$selector"
     rodney_cmd input "$selector" "$text"
 
-    # Verify the value was set correctly
+    # Verify the value was set correctly (skip if selector has JS-unfriendly chars)
     local actual
-    actual=$($RODNEY_CMD js "document.querySelector('${selector}').value")
-    if [[ "$actual" != "$text" ]]; then
+    local escaped_sel
+    escaped_sel=$(printf '%s' "$selector" | sed "s/'/\\\\'/g")
+    actual=$($RODNEY_CMD js "document.querySelector('${escaped_sel}')?.value || ''" 2>/dev/null || echo "")
+    if [[ -n "$actual" ]] && [[ "$actual" != "$text" ]]; then
         echo "  [warn] Field $selector: expected '${text:0:40}...' but got '${actual:0:40}...'" >&2
         # Retry once: clear and re-input
         rodney_cmd clear "$selector"

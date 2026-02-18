@@ -6,37 +6,39 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "$SCRIPT_DIR/../config/env.sh"
 source "$SCRIPT_DIR/../config/selectors.sh"
 source "$SCRIPT_DIR/../lib/rodney-helpers.sh"
-source "$SCRIPT_DIR/../lib/streamfield.sh"
 source "$SCRIPT_DIR/../lib/draftail.sh"
+source "$SCRIPT_DIR/../lib/streamfield.sh"
 source "$SCRIPT_DIR/../lib/section-helpers.sh"
 
 SECTION_ID="faculty"
 echo "=== Create Step 7: Fill Faculty Section ==="
 
 section_json=$(get_section_data "$SECTION_ID")
-block_sel=$(fill_section_standard_fields "$SECTION_ID")
 
-# Featured faculty bio
+# 1. Heading block: headline + subhead
+headline=$(section_field "$section_json" ".fields.headline")
+subhead=$(section_field "$section_json" ".fields.subhead")
+add_heading_block "$headline" "$subhead"
+
+# 2. Paragraph block: body + featured faculty name and bio combined
+body=$(section_field "$section_json" ".fields.body")
 faculty_name=$(section_field "$section_json" ".fields.featured_faculty.name")
 faculty_bio=$(section_field "$section_json" ".fields.featured_faculty.bio")
 
-if [[ -n "$faculty_name" ]]; then
-    echo "  Featured faculty: ${faculty_name}"
-    streamfield_fill_field "$block_sel" "faculty_name" "$faculty_name"
-    streamfield_fill_field "$block_sel" "featured_name" "$faculty_name"
-fi
-if [[ -n "$faculty_bio" ]]; then
-    echo "  Setting faculty bio..."
-    draftail_set_content "${block_sel} [data-contentpath=\"faculty_bio\"]" "$faculty_bio"
-    # Try alternative field names
-    draftail_set_content "${block_sel} [data-contentpath=\"featured_bio\"]" "$faculty_bio"
+combined_body="$body"
+if [[ -n "$faculty_name" && -n "$faculty_bio" ]]; then
+    combined_body="${body}\n\n${faculty_name}: ${faculty_bio}"
 fi
 
-# CTA
+if [[ -n "$combined_body" ]]; then
+    add_paragraph_block "$combined_body"
+fi
+
+# 3. Small CTA block: cta
 cta_label=$(section_field "$section_json" ".fields.cta.label")
 cta_url=$(section_field "$section_json" ".fields.cta.url")
 if [[ -n "$cta_label" ]]; then
-    fill_cta "$block_sel" "$cta_label" "$cta_url"
+    add_cta_block "$cta_label" "$cta_url"
 fi
 
 take_named_screenshot "create-07-faculty"

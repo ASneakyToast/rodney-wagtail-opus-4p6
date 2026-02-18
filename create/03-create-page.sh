@@ -11,6 +11,7 @@ source "$SCRIPT_DIR/../lib/wagtail-navigation.sh"
 echo "=== Create Step 3: Create Page ==="
 
 # Navigate directly to the create form
+# URL pattern: /admin/pages/add/{app}/{model}/{parent_id}/
 navigate_to_create_page "$PARENT_PAGE_ID" "$PAGE_TYPE_APP_LABEL" "$PAGE_TYPE_MODEL"
 
 # Verify the edit form loaded

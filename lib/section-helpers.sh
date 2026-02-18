@@ -19,75 +19,137 @@ section_field() {
     echo "$json" | jq -r "$path // empty"
 }
 
-# Fill a section's standard fields (headline, subhead, body) in the last StreamField block
+# Add a Heading block (CharBlock - single text value)
+add_heading_block() {
+    local headline="$1"
+    local subhead="${2:-}"
+
+    # Combine headline and subhead if both present
+    local heading_text="$headline"
+    if [[ -n "$subhead" ]]; then
+        heading_text="${headline} — ${subhead}"
+    fi
+
+    streamfield_add_block "body" "Heading"
+    local block_sel
+    block_sel=$(streamfield_get_last_block "body")
+
+    echo "  Heading: ${heading_text}"
+    streamfield_fill_value "$block_sel" "$heading_text"
+}
+
+# Add a Paragraph block (RichTextBlock - Draftail editor)
+add_paragraph_block() {
+    local text="$1"
+
+    streamfield_add_block "body" "Paragraph"
+    local block_sel
+    block_sel=$(streamfield_get_last_block "body")
+
+    echo "  Setting paragraph content (${#text} chars)..."
+    draftail_set_content "$block_sel" "$text"
+}
+
+# Add a Quote block (may be CharBlock or StructBlock - we'll detect)
+add_quote_block() {
+    local quotation="$1"
+    local citation_name="${2:-}"
+
+    streamfield_add_block "body" "Quote"
+    local block_sel
+    block_sel=$(streamfield_get_last_block "body")
+
+    # Check if this is a StructBlock (has sub-contentpath elements) or CharBlock
+    local has_subfields
+    has_subfields=$($RODNEY_CMD js "
+        document.querySelector('${block_sel} [data-contentpath]') ? 'struct' : 'char'
+    " 2>/dev/null || echo "char")
+
+    if [[ "$has_subfields" == "struct" ]]; then
+        echo "  Quote (struct): \"${quotation:0:50}...\""
+        streamfield_fill_field "$block_sel" "quotation" "$quotation"
+        if [[ -n "$citation_name" ]]; then
+            streamfield_fill_field "$block_sel" "citation_name" "$citation_name"
+        fi
+    else
+        # CharBlock - combine quote and attribution
+        local quote_text="$quotation"
+        if [[ -n "$citation_name" ]]; then
+            quote_text="${quotation} — ${citation_name}"
+        fi
+        echo "  Quote (char): \"${quote_text:0:60}...\""
+        streamfield_fill_value "$block_sel" "$quote_text"
+    fi
+}
+
+# Add an Embed block (may be CharBlock or StructBlock)
+add_embed_block() {
+    local url="$1"
+
+    streamfield_add_block "body" "Embed"
+    local block_sel
+    block_sel=$(streamfield_get_last_block "body")
+
+    # Check structure
+    local has_subfields
+    has_subfields=$($RODNEY_CMD js "
+        document.querySelector('${block_sel} [data-contentpath]') ? 'struct' : 'char'
+    " 2>/dev/null || echo "char")
+
+    if [[ "$has_subfields" == "struct" ]]; then
+        echo "  Embed (struct): ${url}"
+        streamfield_fill_field "$block_sel" "embed" "$url"
+    else
+        echo "  Embed (char): ${url}"
+        streamfield_fill_value "$block_sel" "$url"
+    fi
+}
+
+# Add a Small CTA block (likely StructBlock)
+add_cta_block() {
+    local label="$1"
+    local url="$2"
+
+    streamfield_add_block "body" "Small CTA"
+    local block_sel
+    block_sel=$(streamfield_get_last_block "body")
+
+    # Check structure
+    local has_subfields
+    has_subfields=$($RODNEY_CMD js "
+        document.querySelector('${block_sel} [data-contentpath]') ? 'struct' : 'char'
+    " 2>/dev/null || echo "char")
+
+    echo "  CTA: ${label} -> ${url}"
+    if [[ "$has_subfields" == "struct" ]]; then
+        # Try Draftail for title, then fallback to text
+        streamfield_fill_draftail "$block_sel" "title" "$label"
+        streamfield_fill_field "$block_sel" "external_url" "$url"
+    else
+        # CharBlock - just put the URL
+        streamfield_fill_value "$block_sel" "$url"
+    fi
+}
+
+# Fill a section's standard fields: adds Heading + Paragraph blocks
 # Usage: fill_section_standard_fields "overview"
 fill_section_standard_fields() {
     local section_id="$1"
     local section_json
     section_json=$(get_section_data "$section_id")
 
-    local block_type headline subhead body
-    block_type=$(section_field "$section_json" ".block_type")
+    local headline subhead body
     headline=$(section_field "$section_json" ".fields.headline")
     subhead=$(section_field "$section_json" ".fields.subhead")
     body=$(section_field "$section_json" ".fields.body")
 
-    # Add the block
-    streamfield_add_block "body" "$block_type"
-
-    # Get selector for the new block
-    local block_sel
-    block_sel=$(streamfield_get_last_block "body")
-
-    # Fill headline
+    # Add Heading block
     if [[ -n "$headline" ]]; then
-        echo "  Headline: ${headline}"
-        streamfield_fill_field "$block_sel" "headline" "$headline"
+        add_heading_block "$headline" "$subhead"
     fi
 
-    # Fill subhead
-    if [[ -n "$subhead" ]]; then
-        echo "  Subhead: ${subhead}"
-        streamfield_fill_field "$block_sel" "subhead" "$subhead"
-    fi
-
-    # Fill body (rich text)
+    # Add Paragraph block with body text
     if [[ -n "$body" ]]; then
-        echo "  Setting body content..."
-        draftail_set_content "${block_sel} [data-contentpath=\"body\"]" "$body"
+        add_paragraph_block "$body"
     fi
-
-    # Return the block selector for further customization
-    echo "$block_sel"
-}
-
-# Fill a CTA (call-to-action) sub-block within a parent block
-fill_cta() {
-    local parent_selector="$1"
-    local label="$2"
-    local url="$3"
-
-    echo "  CTA: ${label} -> ${url}"
-    streamfield_fill_field "$parent_selector" "cta_label" "$label"
-    streamfield_fill_field "$parent_selector" "cta_url" "$url"
-
-    # Alternative field names
-    streamfield_fill_field "$parent_selector" "button_text" "$label"
-    streamfield_fill_field "$parent_selector" "button_url" "$url"
-    streamfield_fill_field "$parent_selector" "link_text" "$label"
-    streamfield_fill_field "$parent_selector" "link_url" "$url"
-}
-
-# Fill a pull quote sub-block
-fill_pull_quote() {
-    local parent_selector="$1"
-    local quote="$2"
-    local attribution="$3"
-
-    echo "  Pull quote: \"${quote:0:50}...\" -- ${attribution}"
-    streamfield_fill_field "$parent_selector" "quote" "$quote"
-    streamfield_fill_field "$parent_selector" "attribution" "$attribution"
-    # Alternative names
-    streamfield_fill_field "$parent_selector" "pull_quote" "$quote"
-    streamfield_fill_field "$parent_selector" "quote_attribution" "$attribution"
 }

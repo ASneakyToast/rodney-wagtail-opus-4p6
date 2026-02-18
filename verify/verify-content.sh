@@ -24,9 +24,8 @@ This document verifies that the published page content matches the source data f
 
 $SHOWBOAT note "$DOC" "## Step 1: Start browser and login"
 
-$SHOWBOAT exec "$DOC" bash -c "
-    $RODNEY_CMD start --local 2>&1 || true
-    sleep 2
+$SHOWBOAT exec "$DOC" bash "
+    echo 'Browser is already running, skipping start'
     $RODNEY_CMD open '${WAGTAIL_ADMIN_URL}/' 2>&1
     $RODNEY_CMD waitstable 2>&1
     $RODNEY_CMD input '#id_username' '${WAGTAIL_USERNAME}' 2>&1
@@ -38,7 +37,7 @@ $SHOWBOAT exec "$DOC" bash -c "
 
 $SHOWBOAT note "$DOC" "## Step 2: Navigate to the page edit form"
 
-$SHOWBOAT exec "$DOC" bash -c "
+$SHOWBOAT exec "$DOC" bash "
     # Navigate to parent and find the page
     $RODNEY_CMD open '${WAGTAIL_ADMIN_URL}/pages/${PARENT_PAGE_ID}/' 2>&1
     $RODNEY_CMD waitstable 2>&1
@@ -61,7 +60,7 @@ $SHOWBOAT exec "$DOC" bash -c "
 $SHOWBOAT note "$DOC" "## Step 3: Verify page title"
 
 EXPECTED_TITLE=$(jq -r '.page.title' "$DATA_FILE")
-$SHOWBOAT exec "$DOC" bash -c "
+$SHOWBOAT exec "$DOC" bash "
     actual_title=\$($RODNEY_CMD js \"document.querySelector('#id_title')?.value || 'not found'\" 2>&1)
     expected='${EXPECTED_TITLE}'
     echo \"Expected: \${expected}\"
@@ -82,7 +81,7 @@ for section_id in $SECTION_IDS; do
 
     $SHOWBOAT note "$DOC" "### Section: ${section_id}"
 
-    $SHOWBOAT exec "$DOC" bash -c "
+    $SHOWBOAT exec "$DOC" bash "
         echo 'Expected headline: ${expected_headline}'
         # Try to find this section in the page form
         $RODNEY_CMD js \"
@@ -101,7 +100,7 @@ for section_id in $SECTION_IDS; do
     "
 done
 
-$SHOWBOAT exec "$DOC" bash -c "
+$SHOWBOAT exec "$DOC" bash "
     $RODNEY_CMD screenshot screenshots/verify-content-form.png 2>&1
     echo 'Screenshot saved'
 "
@@ -110,7 +109,8 @@ $SHOWBOAT image "$DOC" "screenshots/verify-content-form.png"
 
 $SHOWBOAT note "$DOC" "## Cleanup"
 
-$SHOWBOAT exec "$DOC" bash -c "$RODNEY_CMD stop 2>&1 || true"
+# Browser is managed externally; not stopping rodney here
+echo "  Browser left running (managed externally)"
 
 echo "  Showboat document created: $DOC"
 echo "=== Content verification complete ==="
